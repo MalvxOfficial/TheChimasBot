@@ -430,7 +430,7 @@ const buildUserId = (numberString, config) => {
   if (config.lidowner && numberString === config.numerodono) {
     return config.lidowner;
   }
-  return numberString.replace(/[^\d]/g, '') + '@s.whatsapp.net';
+return String(numberString).replace(/[^\d]/g, '') + '@s.whatsapp.net';
 };
 
 // Função para obter o ID do bot
