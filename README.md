@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/STATUS-ATIVO-success?style=for-the-badge" alt="Status: Ativo" />
   
-  <img src="https://img.shields.io/badge/VERSÃO-v3.0-blue?style=for-the-badge" alt="Versão" />
+  <img src="https://img.shields.io/badge/VERSÃO-v10.0.6-blue?style=for-the-badge" alt="Versão" />
   
   <img src="https://img.shields.io/github/stars/DevTokyoVx/nazuna?style=for-the-badge&color=yellow&label=Estrelas" alt="Estrelas" />
   
@@ -71,6 +71,8 @@ Atualmente, o bot segue em **desenvolvimento ativo**, recebendo atualizações, 
   <summary><strong>💰 É pago?</strong></summary>
 
 Não. A Nazuna Bot é totalmente gratuita e open source para a comunidade.
+
+Você paga pela API caso queira usar alguns outros comandos do bot
 </details>
 
 <details>
@@ -95,6 +97,22 @@ Sim. A Nazuna funciona normalmente em VPS Linux, Pterodactyl e hospedagens Node.
   <summary><strong>📦 O código é open source?</strong></summary>
 
 Sim. Todo o código permanece aberto para estudos e contribuições.
+</details>
+
+<details>
+  <summary><strong>👤 Como virar dono do bot?</strong></summary>
+
+1️⃣ ligue o bot e use o comando #lid (# = prefixo do bot)
+
+2️⃣ acesse os arquivos do bot (dados/src/config.json
+
+3️⃣ procure por "lidOwner": "278696501993618@lid"
+
+4️⃣ copie oque o bot te enviou ao usar o comando #lid
+
+5️⃣ voltando ao arquivo do bot troquei o "278696501993618@lid" pelo oque o bot te enviou 
+
+6️⃣ exemplo: "lidOwner": "848285828@lid"
 </details>
 
 <details>
