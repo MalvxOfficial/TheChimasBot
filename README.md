@@ -202,7 +202,7 @@ Sim. Todo o código permanece aberto para estudos e contribuições.
 2️⃣ Use o comando `#prefix !`
 
 ```
-#apikey asnfowiubvkawo
+#prefix !
 ```
 
 3️⃣ O símbolo na frente do comando prefix é o novo prefixo que vai ser aplicado
