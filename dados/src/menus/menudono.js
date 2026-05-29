@@ -78,6 +78,9 @@ ${middleBorder}${menuItemIcon}${prefix}addcmdmidia
 ${middleBorder}${menuItemIcon}${prefix}listcmd
 ${middleBorder}${menuItemIcon}${prefix}delcmd
 ${middleBorder}${menuItemIcon}${prefix}testcmd
+${middleBorder}${menuItemIcon}${prefix}addcmd-subdono
+${middleBorder}${menuItemIcon}${prefix}removecmd-subdono
+${middleBorder}${menuItemIcon}${prefix}listcmd-subdono
 ${middleBorder}
 ${middleBorder}${menuItemIcon}${prefix}addalias
 ${middleBorder}${menuItemIcon}${prefix}listalias

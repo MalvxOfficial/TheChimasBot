@@ -169,6 +169,7 @@ ${middleBorder}${menuItemIcon}${prefix}bemvindo
 ${middleBorder}${menuItemIcon}${prefix}bemvindo2
 ${middleBorder}${menuItemIcon}${prefix}saida
 ${middleBorder}${menuItemIcon}${prefix}autosticker
+${middleBorder}${menuItemIcon}${prefix}autotranscrever
 ${middleBorder}${menuItemIcon}${prefix}soadm
 ${middleBorder}${menuItemIcon}${prefix}cmdlimit
 ${middleBorder}${menuItemIcon}${prefix}fotomenugrupo

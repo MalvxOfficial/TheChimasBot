@@ -43,6 +43,7 @@ async function loadModules() {
         const [
             youtubeMod,
             tiktokMod,
+            totextMod,
             pinterestMod,
             igdlMod,
             lyricsMod,
@@ -57,6 +58,7 @@ async function loadModules() {
         ] = await Promise.all([
             import('./downloads/youtube.js'),
             import('./downloads/tiktok.js'),
+            import('./ferramentas/totext.js'),
             import('./downloads/pinterest.js'),
             import('./downloads/igdl.js'),
             import('./downloads/lyrics.js'),
@@ -78,10 +80,18 @@ async function loadModules() {
         }
 
         modules.tiktok = tiktokMod.default ?? tiktokMod;
-        if (modules.tiktok && typeof modules.tiktok.dl !== 'function') {
+        
+               if (modules.tiktok && typeof modules.tiktok.dl !== 'function') {
             console.warn('[EXPORTS] TikTok dl function not found');
         }
 
+
+        modules.totext = totextMod.default ?? totextMod;
+        
+               if (modules.totext && typeof modules.totext.totext !== 'function') {
+            console.warn('[EXPORTS] totext function not found');
+        }
+        
         modules.pinterest = pinterestMod.default ?? pinterestMod;
         if (modules.pinterest && typeof modules.pinterest.dl !== 'function') {
             console.warn('[EXPORTS] Pinterest dl function not found');

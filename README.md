@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/STATUS-ATIVO-success?style=for-the-badge" alt="Status: Ativo" />
   
-  <img src="https://img.shields.io/badge/VERSÃO-v10.0.6-blue?style=for-the-badge" alt="Versão" />
+  <img src="https://img.shields.io/badge/VERSÃO-v10.0.7-blue?style=for-the-badge" alt="Versão" />
   
   <img src="https://img.shields.io/github/stars/DevTokyoVx/nazuna?style=for-the-badge&color=yellow&label=Estrelas" alt="Estrelas" />
   
@@ -37,6 +37,7 @@
 
 ## 📚 Sumário
 
+- [🆕 Novidades da Última Atualização](#-novidades-da-última-atualização)
 - [📢 Continuidade do Projeto](#-continuidade-do-projeto)
 - [📊 O Legado em Números](#-o-legado-em-números)
 - [❓ Perguntas Frequentes](#-perguntas-frequentes)
@@ -45,6 +46,53 @@
 - [👥 Contribuidores](#-contribuidores)
 - [💖 Agradecimento à Comunidade](#-agradecimento-à-comunidade)
 - [📜 Termos de Uso](#-termos-de-uso)
+
+---
+
+## 🆕 Novidades da Última Atualização
+
+<p align="center">
+  <img src="https://img.shields.io/badge/VERSÃO-v10.0.7-blue?style=for-the-badge" alt="v10.0.7" />
+</p>
+
+<details open>
+  <summary><strong>🔧 Correções</strong></summary>
+
+<br>
+
+- `removebg`
+- `sfundo`
+- Comando assistente
+- `zipbot`
+
+</details>
+
+<details open>
+  <summary><strong>✨ Adicionado</strong></summary>
+
+<br>
+
+- `roletaban`
+- `enquete`
+- `welcome2` / `legendabv2`
+- `addcmd-subdono play`
+- `removecmd-subdono`
+- `listcmd-subdono`
+- `transcrever`
+- `autotranscrever`
+
+</details>
+
+<details open>
+  <summary><strong>⚡ Comandos Melhorados</strong></summary>
+
+<br>
+
+- `vab`
+- `eununca`
+- `letra`
+
+</details>
 
 ---
 
@@ -144,6 +192,25 @@ Sim. Todo o código permanece aberto para estudos e contribuições.
 
 7️⃣ Salve o arquivo, reinicie o bot e desfrute dos comandos de dono!
 </details>
+
+
+<details>
+  <summary><strong>*️⃣ Como alterar o prefixo do bot?</strong></summary>
+
+1️⃣ Certifique-se de ter configurado o número do dono corretamente 
+
+2️⃣ Use o comando `#prefix !`
+
+```
+#apikey asnfowiubvkawo
+```
+
+3️⃣ O símbolo na frente do comando prefix é o novo prefixo que vai ser aplicado
+
+
+4️⃣ Pronto! Prefixo do bot alterado com sucesso.
+</details>
+
 
 <details>
   <summary><strong>💸 Como ativar minha chave de API?</strong></summary>

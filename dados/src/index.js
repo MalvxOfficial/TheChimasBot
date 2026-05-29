@@ -457,6 +457,7 @@ const modules = await import('./funcs/exports.js');
 const {
   youtube,
   tiktok,
+  totext,
   pinterest,
   igdl,
   kwai,
@@ -3833,6 +3834,51 @@ packname: `${nomebot}`,            type: isVideo ? 'video' : 'image',
         console.error("Erro ao converter mídia em figurinha automática:", e);
       }
     }
+    
+    
+    if (isGroup && groupData.autotranscrever && !info.key.fromMe) {
+  try {
+
+    const audioMessage =
+      info.message?.audioMessage;
+
+    const isPTT =
+      audioMessage?.ptt === true;
+
+    if (isPTT && audioMessage) {
+
+
+      reply('📝 transcrevendo áudio, aguarde...');
+
+
+      const media =
+        await getFileBuffer(audioMessage, "audio");
+
+
+      const linkz =
+        await upload(media);
+
+
+      const resultado =
+        await totext.totext(linkz);
+
+      if (!resultado?.ok) {
+        return;
+      }
+      reply(
+        `📝 *autotranscrever:*\n\n${resultado.texto}`
+      );
+
+    }
+
+  } catch (e) {
+    console.error(
+      "Erro no autotranscrever:",
+      e
+    );
+  }
+}
+
     let quotedMessageContent = null;
     if (type === 'extendedTextMessage' && info.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
       quotedMessageContent = info.message.extendedTextMessage.contextInfo.quotedMessage;
@@ -24665,10 +24711,9 @@ ${prefix}togglecmdvip premium_ia off`);
         try {
           const TextinCriadorInfo = `╭━━━⊱ 👨‍💻 *CRIADOR* 👨‍💻 ⊱━━━╮
 │
-│ 💎 *Nome:* Hiudy
-│ 📱 *WhatsApp:* wa.me/553391967445
-│ 🌐 *GitHub:* github.com/hiudyy
-│ 📸 *Instagram:* instagram.com/hiudyyy_
+│ 💎 *Nome:* DevTokyo
+│ 📱 *WhatsApp:* wa.me/5532985076326
+│ 🌐 *GitHub:* github.com/DevTokyoVx
 │
 ╰━━━━━━━━━━━━━━━━━━━━━━━━╯`;
           await reply(TextinCriadorInfo);
@@ -24814,6 +24859,57 @@ ${prefix}togglecmdvip premium_ia off`);
         break;
 
 
+
+
+case 'totext':
+case 'transcrever': {
+const quoted =
+        info.message?.extendedTextMessage
+            ?.contextInfo?.quotedMessage;
+
+    if (!quoted) {
+        return reply('❌ Marque um áudio.');
+    }
+
+const isAudio =
+        quoted.audioMessage ||
+        quoted.pttMessage ||
+        quoted.documentMessage?.mimetype?.startsWith('audio/') ||
+        (
+            quoted.videoMessage?.ptv === false &&
+            quoted.videoMessage?.mimetype?.startsWith('audio/')
+        );
+
+    if (!isAudio) {
+        return reply('❌ A mensagem marcada não é um áudio.');
+    }
+    const audio =
+        quoted.audioMessage ||
+        quoted.pttMessage ||
+        quoted.documentMessage ||
+        quoted.videoMessage;
+
+
+    const media =
+        await getFileBuffer(audio, "audio");
+
+
+    const linkz =
+        await upload(media);
+
+reply('*Já estou efetuando a transcrição!📃*')
+    const resultado =
+        await totext.totext(linkz);
+
+    if (!resultado?.ok) {
+        return reply(`❌ ${resultado?.msg || 'Erro ao transcrever áudio.'}`);
+    }
+
+
+    reply(`📝 Transcrição:\n\n${resultado.texto}`);
+
+}
+break;
 
 case 'removebg':
 case 'rmbg':
@@ -28780,6 +28876,25 @@ ${prefix}antistickerplus remover → remove usuário e apaga mensagem
           reply("Ocorreu um erro 💔");
         }
         break;
+   
+        
+             case 'autototext':     
+              case 'autotranscrever':
+        try {
+          if (!isGroup) return reply("Isso só pode ser usado em grupo 💔");
+          if (!isGroupAdmin) return reply("Você precisa ser administrador 💔");
+          const groupFilePath = __dirname + `/../database/grupos/${from}.json`;
+          let groupData = fs.existsSync(groupFilePath) ? JSON.parse(fs.readFileSync(groupFilePath)) : {};
+
+          groupData.autotranscrever = !groupData.autotranscrever;
+          fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
+          reply(`✅ Auto transcrever ${groupData.autotranscrever ? 'ativado' : 'desativado'}! ${groupData.autotranscrever ? 'Todos os áudios com ppt true serão convertidos em texto.' : ''}`);
+        } catch (e) {
+          console.error(e);
+          reply("Ocorreu um erro 💔");
+        }
+        break;
+        
       case 'autorepo':
       case 'autoresposta':
         try {

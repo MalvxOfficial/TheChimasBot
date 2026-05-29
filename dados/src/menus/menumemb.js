@@ -41,6 +41,7 @@ ${bottomBorder}
 ${menuTopBorder}${separatorIcon} *👬 INTERAÇÃO SOCIAL*
 ${middleBorder}
 ${middleBorder}${menuItemIcon}${prefix}roles
+${middleBorder}${menuItemIcon}${prefix}transcrever
 ${middleBorder}${menuItemIcon}${prefix}role.vou
 ${middleBorder}${menuItemIcon}${prefix}role.nvou
 ${middleBorder}${menuItemIcon}${prefix}role.confirmados

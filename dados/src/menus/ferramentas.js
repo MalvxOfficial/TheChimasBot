@@ -27,6 +27,8 @@ ${middleBorder}
 ${middleBorder}${menuItemIcon}${prefix}ssweb
 ${middleBorder}${menuItemIcon}${prefix}qrcode <texto>
 ${middleBorder}${menuItemIcon}${prefix}lerqr (responda imagem)
+${middleBorder}${menuItemIcon}${prefix}removebg (responda imagem)
+${middleBorder}${menuItemIcon}${prefix}transcrever (responda áudio)
 ${bottomBorder}
 
 ${menuTopBorder}${separatorIcon} *🧮 CALCULADORA*
