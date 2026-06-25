@@ -3,7 +3,7 @@ async function menuSticker(prefix, botName = "MeuBot", userName = "Usuário", {
     menuTopBorder = "╭┈",
     bottomBorder = "╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯",
     menuTitleIcon = "🍧ฺꕸ▸",
-    menuItemIcon = "•.̇𖥨֗🍓⭟",
+    menuItemIcon = "•.̇𖥨֗💜⭟",
     separatorIcon = "❁",
     middleBorder = "┊",
     createStickerMenuTitle = "🎨 CRIAÇÃO DE FIGURINHAS",

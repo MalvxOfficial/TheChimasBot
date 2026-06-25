@@ -4,14 +4,14 @@ import path from 'path';
 function patchBaileysNewsletterFollow() {
   try {
 
-const targetFile = path.join(
-  process.cwd(),
-  'node_modules',
-    'baileys',
-  'lib',
-  'Socket',
-  'newsletter.js'
-);
+    const targetFile = path.join(
+      process.cwd(),
+      'node_modules',
+      'baileys',
+      'lib',
+      'Socket',
+      'newsletter.js'
+    );
     if (!fs.existsSync(targetFile)) {
       console.log(`[PATCH] Arquivo não encontrado: ${targetFile}`);
       return false;
@@ -354,6 +354,7 @@ import {
   ANTIFLOOD_FILE,
   ANTIPV_FILE,
   GLOBAL_BLOCKS_FILE,
+  GLOBAL_SETTINGS_FILE,
   CMD_LIMIT_FILE,
   CMD_USER_LIMITS_FILE,
   ANTISPAM_FILE,
@@ -2340,7 +2341,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     const isMuted2 = isUserInMap(groupData.mutedUsers2, sender);
     const isAntiLinkGp = groupData.antilinkgp;
     const ismodoADV = groupData.modoADV;
-    
+
     const isAntiLinkCanal = groupData.antilinkcanal;
     const isAntiLinkSoft = groupData.antilinksoft;
     const isAntiDel = groupData.antidel;
@@ -3806,7 +3807,7 @@ Código: *${roleCode}*`,
 
                 try {
                   await nazu.sendMessage(from, { delete: info.key });
-                } catch {}
+                } catch { }
 
                 if (pornGroupData.modoADV) {
                   pornGroupData.warnings[sender] = pornGroupData.warnings[sender] || [];
@@ -3867,7 +3868,7 @@ Código: *${roleCode}*`,
               participant: sender
             }
           });
-        } catch {}
+        } catch { }
 
         if (locGroupData.modoADV) {
           locGroupData.warnings[sender] = locGroupData.warnings[sender] || [];
@@ -3925,7 +3926,7 @@ Código: *${roleCode}*`,
               participant: sender
             }
           });
-        } catch {}
+        } catch { }
 
         if (docGroupData.modoADV) {
           docGroupData.warnings[sender] = docGroupData.warnings[sender] || [];
@@ -3983,8 +3984,8 @@ Código: *${roleCode}*`,
           const shouldForceSquare = global.autoStickerMode === 'square';
           await sendSticker(nazu, from, {
             sticker: buffer,
-author: `『${pushname}』`,
-packname: `${nomebot}`,            type: isVideo ? 'video' : 'image',
+            author: `『${pushname}』`,
+            packname: `${nomebot}`, type: isVideo ? 'video' : 'image',
             forceSquare: shouldForceSquare
           }, {
             quoted: info
@@ -3994,50 +3995,50 @@ packname: `${nomebot}`,            type: isVideo ? 'video' : 'image',
         console.error("Erro ao converter mídia em figurinha automática:", e);
       }
     }
-    
-    
+
+
     if (isGroup && groupData.autotranscrever && !info.key.fromMe) {
-  try {
+      try {
 
-    const audioMessage =
-      info.message?.audioMessage;
+        const audioMessage =
+          info.message?.audioMessage;
 
-    const isPTT =
-      audioMessage?.ptt === true;
+        const isPTT =
+          audioMessage?.ptt === true;
 
-    if (isPTT && audioMessage) {
-
-
-      reply('📝 transcrevendo áudio, aguarde...');
+        if (isPTT && audioMessage) {
 
 
-      const media =
-        await getFileBuffer(audioMessage, "audio");
+          reply('📝 transcrevendo áudio, aguarde...');
 
 
-      const linkz =
-        await upload(media);
+          const media =
+            await getFileBuffer(audioMessage, "audio");
 
 
-      const resultado =
-        await totext.totext(linkz);
+          const linkz =
+            await upload(media);
 
-      if (!resultado?.ok) {
-        return;
+
+          const resultado =
+            await totext.totext(linkz);
+
+          if (!resultado?.ok) {
+            return;
+          }
+          reply(
+            `📝 *autotranscrever:*\n\n${resultado.texto}`
+          );
+
+        }
+
+      } catch (e) {
+        console.error(
+          "Erro no autotranscrever:",
+          e
+        );
       }
-      reply(
-        `📝 *autotranscrever:*\n\n${resultado.texto}`
-      );
-
     }
-
-  } catch (e) {
-    console.error(
-      "Erro no autotranscrever:",
-      e
-    );
-  }
-}
 
     let quotedMessageContent = null;
     if (type === 'extendedTextMessage' && info.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
@@ -4113,265 +4114,265 @@ packname: `${nomebot}`,            type: isVideo ? 'video' : 'image',
     // Verifica se o usuário é um parceiro registrado
     const isParceiro = !!(parceriasData?.active && parceriasData?.partners?.[sender]);
 
-if (isGroup && isAntiLinkGp && !isGroupAdmin && !isParceiro) {
-if (!isUserWhitelisted(sender, 'antilinkgp')) {
+    if (isGroup && isAntiLinkGp && !isGroupAdmin && !isParceiro) {
+      if (!isUserWhitelisted(sender, 'antilinkgp')) {
 
-let foundGroupLink = false;
-let link_dgp = null;
+        let foundGroupLink = false;
+        let link_dgp = null;
 
-try {
+        try {
 
-const groupFilePath = buildGroupFilePath(from);
+          const groupFilePath = buildGroupFilePath(from);
 
-let groupData =
-fs.existsSync(groupFilePath)
-? JSON.parse(
-fs.readFileSync(groupFilePath)
-)
-: {};
+          let groupData =
+            fs.existsSync(groupFilePath)
+              ? JSON.parse(
+                fs.readFileSync(groupFilePath)
+              )
+              : {};
 
-groupData.warnings =
-groupData.warnings || {};
+          groupData.warnings =
+            groupData.warnings || {};
 
-if (
-budy2 &&
-budy2.includes(
-'chat.whatsapp.com'
-)
-) {
+          if (
+            budy2 &&
+            budy2.includes(
+              'chat.whatsapp.com'
+            )
+          ) {
 
-foundGroupLink = true;
+            foundGroupLink = true;
 
-link_dgp =
-await nazu.groupInviteCode(
-from
-);
+            link_dgp =
+              await nazu.groupInviteCode(
+                from
+              );
 
-if (
-budy2.includes(
-link_dgp
-)
-)
-foundGroupLink = false;
+            if (
+              budy2.includes(
+                link_dgp
+              )
+            )
+              foundGroupLink = false;
 
-}
+          }
 
-if (
-!foundGroupLink &&
-info.message
-?.requestPaymentMessage
-) {
+          if (
+            !foundGroupLink &&
+            info.message
+              ?.requestPaymentMessage
+          ) {
 
-const paymentText =
-info.message
-.requestPaymentMessage
-?.noteMessage
-?.extendedTextMessage
-?.text || '';
+            const paymentText =
+              info.message
+                .requestPaymentMessage
+                ?.noteMessage
+                ?.extendedTextMessage
+                ?.text || '';
 
-if (
-paymentText.includes(
-'chat.whatsapp.com'
-)
-) {
+            if (
+              paymentText.includes(
+                'chat.whatsapp.com'
+              )
+            ) {
 
-foundGroupLink = true;
+              foundGroupLink = true;
 
-link_dgp =
-link_dgp ||
-await nazu.groupInviteCode(
-from
-);
+              link_dgp =
+                link_dgp ||
+                await nazu.groupInviteCode(
+                  from
+                );
 
-if (
-paymentText.includes(
-link_dgp
-)
-)
-foundGroupLink = false;
+              if (
+                paymentText.includes(
+                  link_dgp
+                )
+              )
+                foundGroupLink = false;
 
-}
+            }
 
-}
+          }
 
-if (foundGroupLink) {
+          if (foundGroupLink) {
 
-if (isOwner)
-return;
+            if (isOwner)
+              return;
 
-if (
-!AllgroupMembers.includes(
-sender
-)
-)
-return;
+            if (
+              !AllgroupMembers.includes(
+                sender
+              )
+            )
+              return;
 
-// apagar mensagem
-try {
+            // apagar mensagem
+            try {
 
-await nazu.sendMessage(
-from,
-{
-delete: {
-remoteJid: from,
-fromMe: false,
-id: info.key.id,
-participant: sender
-}
-}
-);
+              await nazu.sendMessage(
+                from,
+                {
+                  delete: {
+                    remoteJid: from,
+                    fromMe: false,
+                    id: info.key.id,
+                    participant: sender
+                  }
+                }
+              );
 
-} catch {}
+            } catch { }
 
-// MODO ADVERTÊNCIA
-if (groupData.modoADV) {
+            // MODO ADVERTÊNCIA
+            if (groupData.modoADV) {
 
-groupData.warnings[sender] =
-groupData.warnings[
-sender
-] || [];
+              groupData.warnings[sender] =
+                groupData.warnings[
+                sender
+                ] || [];
 
-groupData.warnings[
-sender
-].push({
-reason:
-'Envio de link de outro grupo',
-timestamp:
-Date.now(),
-issuer:
-botNumber
-});
+              groupData.warnings[
+                sender
+              ].push({
+                reason:
+                  'Envio de link de outro grupo',
+                timestamp:
+                  Date.now(),
+                issuer:
+                  botNumber
+              });
 
-const warningCount =
-groupData
-.warnings[
-sender
-].length;
+              const warningCount =
+                groupData
+                  .warnings[
+                  sender
+                ].length;
 
-fs.writeFileSync(
-groupFilePath,
-JSON.stringify(
-groupData,
-null,
-2
-)
-);
+              fs.writeFileSync(
+                groupFilePath,
+                JSON.stringify(
+                  groupData,
+                  null,
+                  2
+                )
+              );
 
-if (
-warningCount >= 3
-) {
+              if (
+                warningCount >= 3
+              ) {
 
-if (
-isBotAdmin
-) {
+                if (
+                  isBotAdmin
+                ) {
 
-await nazu.groupParticipantsUpdate(
-from,
-[sender],
-'remove'
-);
+                  await nazu.groupParticipantsUpdate(
+                    from,
+                    [sender],
+                    'remove'
+                  );
 
-delete groupData
-.warnings[
-sender
-];
+                  delete groupData
+                    .warnings[
+                    sender
+                  ];
 
-fs.writeFileSync(
-groupFilePath,
-JSON.stringify(
-groupData,
-null,
-2
-)
-);
+                  fs.writeFileSync(
+                    groupFilePath,
+                    JSON.stringify(
+                      groupData,
+                      null,
+                      2
+                    )
+                  );
 
-await reply(
-`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar links de grupos e foi removido.`,
-{
-mentions: [
-sender
-]
-}
-);
+                  await reply(
+                    `🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar links de grupos e foi removido.`,
+                    {
+                      mentions: [
+                        sender
+                      ]
+                    }
+                  );
 
-} else {
+                } else {
 
-await reply(
-`⚠️ @${getUserName(sender)} atingiu *3/3 advertências*, porém preciso ser administrador para remover.`,
-{
-mentions: [
-sender
-]
-}
-);
+                  await reply(
+                    `⚠️ @${getUserName(sender)} atingiu *3/3 advertências*, porém preciso ser administrador para remover.`,
+                    {
+                      mentions: [
+                        sender
+                      ]
+                    }
+                  );
 
-}
+                }
 
-} else {
+              } else {
 
-await reply(
-`⚠️ @${getUserName(sender)} recebeu uma advertência por enviar links.\n\n📊 Advertências: *${warningCount}/3*\n🚫 Ao atingir *3/3* será removido automaticamente.`,
-{
-mentions: [
-sender
-]
-}
-);
+                await reply(
+                  `⚠️ @${getUserName(sender)} recebeu uma advertência por enviar links.\n\n📊 Advertências: *${warningCount}/3*\n🚫 Ao atingir *3/3* será removido automaticamente.`,
+                  {
+                    mentions: [
+                      sender
+                    ]
+                  }
+                );
 
-}
+              }
 
-return;
+              return;
 
-}
+            }
 
-// REMOVER DIRETO (modo antigo)
-if (
-isBotAdmin
-) {
+            // REMOVER DIRETO (modo antigo)
+            if (
+              isBotAdmin
+            ) {
 
-await nazu.groupParticipantsUpdate(
-from,
-[sender],
-'remove'
-);
+              await nazu.groupParticipantsUpdate(
+                from,
+                [sender],
+                'remove'
+              );
 
-await reply(
-`🔗 @${getUserName(sender)}, links de outros grupos não são permitidos. Você foi removido do grupo.`,
-{
-mentions: [
-sender
-]
-}
-);
+              await reply(
+                `🔗 @${getUserName(sender)}, links de outros grupos não são permitidos. Você foi removido do grupo.`,
+                {
+                  mentions: [
+                    sender
+                  ]
+                }
+              );
 
-} else {
+            } else {
 
-await reply(
-`🔗 Atenção @${getUserName(sender)}! Links de outros grupos não são permitidos. Não consigo remover você, mas a mensagem foi apagada.`,
-{
-mentions: [
-sender
-]
-}
-);
+              await reply(
+                `🔗 Atenção @${getUserName(sender)}! Links de outros grupos não são permitidos. Não consigo remover você, mas a mensagem foi apagada.`,
+                {
+                  mentions: [
+                    sender
+                  ]
+                }
+              );
 
-}
+            }
 
-return;
+            return;
 
-}
+          }
 
-} catch (error) {
+        } catch (error) {
 
-console.error(
-"Erro no sistema antilink de grupos:",
-error
-);
+          console.error(
+            "Erro no sistema antilink de grupos:",
+            error
+          );
 
-}
+        }
 
-}
-}
+      }
+    }
     if (isGroup && isAntiLinkCanal && !isGroupAdmin && !isParceiro) {
       if (!isUserWhitelisted(sender, 'antilinkcanal')) {
         let foundChannelLink = false;
@@ -4402,7 +4403,7 @@ error
                   participant: sender
                 }
               });
-            } catch {}
+            } catch { }
 
             if (canalGroupData.modoADV) {
               canalGroupData.warnings[sender] = canalGroupData.warnings[sender] || [];
@@ -4504,7 +4505,7 @@ error
                 participant: sender
               }
             });
-          } catch {}
+          } catch { }
 
           if (hardGroupData.modoADV) {
             hardGroupData.warnings[sender] = hardGroupData.warnings[sender] || [];
@@ -4545,75 +4546,75 @@ error
 
 
 
-if (  isGroup &&  groupData.antistickerplus &&  !isGroupAdmin &&  !isOwner &&  !isParceiro &&  info?.message) {
-  try {
+    if (isGroup && groupData.antistickerplus && !isGroupAdmin && !isOwner && !isParceiro && info?.message) {
+      try {
 
-    const msg = info.message;
+        const msg = info.message;
 
-    const stickerMsg =
-      msg?.stickerMessage ||
-      msg?.lottieStickerMessage?.message?.stickerMessage ||
-      msg?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
-      msg?.extendedTextMessage?.contextInfo?.quotedMessage?.lottieStickerMessage?.message?.stickerMessage;
+        const stickerMsg =
+          msg?.stickerMessage ||
+          msg?.lottieStickerMessage?.message?.stickerMessage ||
+          msg?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
+          msg?.extendedTextMessage?.contextInfo?.quotedMessage?.lottieStickerMessage?.message?.stickerMessage;
 
-    if (stickerMsg && stickerMsg?.isLottie === true) {
+        if (stickerMsg && stickerMsg?.isLottie === true) {
 
-      if (groupData.antistickerplus_apagar || groupData.antistickerplus_remover) {
-        try {
-          await nazu.sendMessage(from, {
-            delete: {
-              remoteJid: from,
-              fromMe: false,
-              id: info.key.id,
-              participant: sender
-            }
-          });
-        } catch {}
-      }
+          if (groupData.antistickerplus_apagar || groupData.antistickerplus_remover) {
+            try {
+              await nazu.sendMessage(from, {
+                delete: {
+                  remoteJid: from,
+                  fromMe: false,
+                  id: info.key.id,
+                  participant: sender
+                }
+              });
+            } catch { }
+          }
 
-      if (groupData.antistickerplus_remover) {
-        const spGroupFilePath = buildGroupFilePath(from);
-        let spGroupData = fs.existsSync(spGroupFilePath) ? JSON.parse(fs.readFileSync(spGroupFilePath)) : {};
-        spGroupData.warnings = spGroupData.warnings || {};
+          if (groupData.antistickerplus_remover) {
+            const spGroupFilePath = buildGroupFilePath(from);
+            let spGroupData = fs.existsSync(spGroupFilePath) ? JSON.parse(fs.readFileSync(spGroupFilePath)) : {};
+            spGroupData.warnings = spGroupData.warnings || {};
 
-        if (spGroupData.modoADV) {
-          spGroupData.warnings[sender] = spGroupData.warnings[sender] || [];
-          spGroupData.warnings[sender].push({
-            reason: 'Envio de figurinha plus',
-            timestamp: Date.now(),
-            issuer: botNumber
-          });
-          const warningCount = spGroupData.warnings[sender].length;
-          fs.writeFileSync(spGroupFilePath, JSON.stringify(spGroupData, null, 2));
-          if (warningCount >= 3) {
-            if (isBotAdmin) {
-              await nazu.groupParticipantsUpdate(from, [sender], 'remove');
-              delete spGroupData.warnings[sender];
+            if (spGroupData.modoADV) {
+              spGroupData.warnings[sender] = spGroupData.warnings[sender] || [];
+              spGroupData.warnings[sender].push({
+                reason: 'Envio de figurinha plus',
+                timestamp: Date.now(),
+                issuer: botNumber
+              });
+              const warningCount = spGroupData.warnings[sender].length;
               fs.writeFileSync(spGroupFilePath, JSON.stringify(spGroupData, null, 2));
-              await reply(`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar figurinhas plus e foi removido.`, { mentions: [sender] });
+              if (warningCount >= 3) {
+                if (isBotAdmin) {
+                  await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+                  delete spGroupData.warnings[sender];
+                  fs.writeFileSync(spGroupFilePath, JSON.stringify(spGroupData, null, 2));
+                  await reply(`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar figurinhas plus e foi removido.`, { mentions: [sender] });
+                } else {
+                  await reply(`⚠️ @${getUserName(sender)} atingiu *3/3 advertências*, porém preciso ser administrador para remover.`, { mentions: [sender] });
+                }
+              } else {
+                await reply(`⚠️ @${getUserName(sender)} recebeu uma advertência por enviar figurinha plus.\n\n📊 Advertências: *${warningCount}/3*\n🚫 Ao atingir *3/3* será removido automaticamente.`, { mentions: [sender] });
+              }
             } else {
-              await reply(`⚠️ @${getUserName(sender)} atingiu *3/3 advertências*, porém preciso ser administrador para remover.`, { mentions: [sender] });
+              await reply(
+                `🚫 @${getUserName(sender)}, este grupo não permite esse tipo de figurinha do whatsapp plus.`,
+                { mentions: [sender] }
+              );
+              if (isBotAdmin) {
+                await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+              }
             }
-          } else {
-            await reply(`⚠️ @${getUserName(sender)} recebeu uma advertência por enviar figurinha plus.\n\n📊 Advertências: *${warningCount}/3*\n🚫 Ao atingir *3/3* será removido automaticamente.`, { mentions: [sender] });
           }
-        } else {
-          await reply(
-            `🚫 @${getUserName(sender)}, este grupo não permite esse tipo de figurinha do whatsapp plus.`,
-            { mentions: [sender] }
-          );
-          if (isBotAdmin) {
-            await nazu.groupParticipantsUpdate(from, [sender], 'remove');
-          }
+
         }
+
+      } catch (err) {
+        console.error("[AntiStickerPlus] Erro:", err);
       }
-
     }
-
-  } catch (err) {
-    console.error("[AntiStickerPlus] Erro:", err);
-  }
-}
 
     const botStateFile = pathz.join(DATABASE_DIR, 'botState.json');
     if (botState.status === 'off' && !isOwner) return;
@@ -4964,7 +4965,7 @@ if (  isGroup &&  groupData.antistickerplus &&  !isGroupAdmin &&  !isOwner &&  !
                 customPrompt = persData[personality].prompt;
               }
             }
-          } catch (_) {}
+          } catch (_) { }
         }
 
         ia.makeAssistentRequest({
@@ -5742,23 +5743,23 @@ Entre em contato com o dono do bot:
     }
 
 
-// ==================== VERIFICAÇÃO DE COMANDOS PARA SUBDONOS ====================
-if (isCmd && command && !isOwner) {
-  try {
-    const subOwnerFile = pathz.join(DATABASE_DIR, 'subOwnerCommands.json');
-    let subOwnerCommands = [];
-    if (fs.existsSync(subOwnerFile)) {
-      subOwnerCommands = JSON.parse(fs.readFileSync(subOwnerFile, 'utf-8'));
-    }
-    if (subOwnerCommands.includes(command)) {
-      if (!isSubOwner) {
-        return reply('🚫 Apenas donos e subdonos podem usar este comando!');
+    // ==================== VERIFICAÇÃO DE COMANDOS PARA SUBDONOS ====================
+    if (isCmd && command && !isOwner) {
+      try {
+        const subOwnerFile = pathz.join(DATABASE_DIR, 'subOwnerCommands.json');
+        let subOwnerCommands = [];
+        if (fs.existsSync(subOwnerFile)) {
+          subOwnerCommands = JSON.parse(fs.readFileSync(subOwnerFile, 'utf-8'));
+        }
+        if (subOwnerCommands.includes(command)) {
+          if (!isSubOwner) {
+            return reply('🚫 Apenas donos e subdonos podem usar este comando!');
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao verificar lista de comandos de subdonos:', e);
       }
     }
-  } catch (e) {
-    console.error('Erro ao verificar lista de comandos de subdonos:', e);
-  }
-}
 
 
     switch (command) {
@@ -11448,7 +11449,7 @@ if (isCmd && command && !isOwner) {
       case 'rpgadd':
       case 'rpgaddmoney':
       case 'adicionardinheiro': {
-        
+
 
         const target = (menc_jid2 && menc_jid2[0]) || null;
         if (!target) return reply(`❌ Marque um usuário!\n\n💡 Uso: ${prefix}rpgadd @user <valor>`);
@@ -11469,7 +11470,7 @@ if (isCmd && command && !isOwner) {
       case 'rpgremove':
       case 'rpgremovemoney':
       case 'removerdinheiro': {
-        
+
 
         const target = (menc_jid2 && menc_jid2[0]) || null;
         if (!target) return reply(`❌ Marque um usuário!\n\n💡 Uso: ${prefix}rpgremove @user <valor>`);
@@ -11491,7 +11492,7 @@ if (isCmd && command && !isOwner) {
       case 'rpgsetlevel':
       case 'setlevel':
       case 'definirnivelrpg': {
-        
+
 
         const target = (menc_jid2 && menc_jid2[0]) || null;
         if (!target) return reply(`❌ Marque um usuário!\n\n💡 Uso: ${prefix}rpgsetlevel @user <nivel>`);
@@ -11512,7 +11513,7 @@ if (isCmd && command && !isOwner) {
       // Adicionar item ao jogador
       case 'rpgadditem':
       case 'adicionaritem': {
-        
+
 
         const target = (menc_jid2 && menc_jid2[0]) || null;
         if (!target) return reply(`❌ Marque um usuário!\n\n💡 Uso: ${prefix}rpgadditem @user <item> <quantidade>`);
@@ -11535,7 +11536,7 @@ if (isCmd && command && !isOwner) {
       // Remover item do jogador
       case 'rpgremoveitem':
       case 'removeritem': {
-        
+
 
         const target = (menc_jid2 && menc_jid2[0]) || null;
         if (!target) return reply(`❌ Marque um usuário!\n\n💡 Uso: ${prefix}rpgremoveitem @user <item> <quantidade>`);
@@ -11558,7 +11559,7 @@ if (isCmd && command && !isOwner) {
       // Reset total do jogador
       case 'rpgresetplayer':
       case 'resetarjogador': {
-        
+
 
         const target = (menc_jid2 && menc_jid2[0]) || null;
         if (!target) return reply(`❌ Marque um usuário!\n\n💡 Uso: ${prefix}rpgresetplayer @user`);
@@ -11595,7 +11596,7 @@ if (isCmd && command && !isOwner) {
       case 'rpgstats':
       case 'rpgstatistics':
       case 'estatisticasrpg': {
-        
+
 
         const econ = loadEconomy();
         const allUsers = Object.entries(econ.users || {});
@@ -13399,407 +13400,7 @@ if (isCmd && command && !isOwner) {
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
-      //INTELIGENCIA ARTIFICIAL
-      case 'gemma':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Gemma? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-        reply(`⏳ Só um segundinho, estou consultando o Gemma... ✨`).then(() => {
-          ia.makeCognimaRequest('google/gemma-7b', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Gemma:', e);
-            if (e.message && e.message.includes('API key inválida')) {
 
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Gemma! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'phi':
-      case 'phi3':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Phi? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-        reply(`⏳ Só um segundinho, estou consultando o Phi... ✨`).then(() => {
-          ia.makeCognimaRequest('microsoft/phi-3-medium-4k-instruct', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Phi:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Phi! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'qwen2':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Qwen2? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-        reply(`⏳ Só um segundinho, estou consultando o Qwen2... ✨`).then(() => {
-          ia.makeCognimaRequest('qwen/qwen2-7b-instruct', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Qwen2:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Qwen2! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'qwen':
-      case 'qwen3':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Qwen? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-        reply(`⏳ Só um segundinho, estou consultando o Qwen... ✨`).then(() => {
-          ia.makeCognimaRequest('qwen/qwen3-235b-a22b', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Qwen:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Qwen! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'llama':
-      case 'llama3':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Llama? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-        reply(`⏳ Só um segundinho, estou consultando o Llama... ✨`).then(() => {
-          ia.makeCognimaRequest('abacusai/dracarys-llama-3.1-70b-instruct', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Llama:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Llama! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'baichuan':
-      case 'baichuan2':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Baichuan? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-        reply(`⏳ Só um segundinho, estou consultando o Baichuan... ✨`).then(() => {
-          ia.makeCognimaRequest('baichuan-inc/baichuan2-13b-chat', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Baichuan:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Baichuan! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'marin':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Marin? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o Marin... ✨`).then(() => {
-          ia.makeCognimaRequest('marin/marin-8b-instruct', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Marin:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Marin! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'kimi':
-      case 'kimik2':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Kimi? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o Kimi... ✨`).then(() => {
-          ia.makeCognimaRequest('moonshotai/kimi-k2-instruct', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Kimi:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Kimi! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'mistral':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Mistral? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o Mistral... ✨`).then(() => {
-          ia.makeCognimaRequest('mistralai/mistral-small-24b-instruct', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Mistral:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Mistral! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'magistral':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Magistral? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o Magistral... ✨`).then(() => {
-          ia.makeCognimaRequest('mistralai/magistral-small-2506', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Magistral:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Magistral! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'rakutenai':
-      case 'rocket':
-        if (!q) return reply(`🤔 Qual sua dúvida para o RakutenAI? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o RakutenAI... ✨`).then(() => {
-          ia.makeCognimaRequest('rakuten/rakutenai-7b-instruct', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API RakutenAI:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o RakutenAI! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'yi':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Yi? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o Yi... ✨`).then(() => {
-          ia.makeCognimaRequest('01-ai/yi-large', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Yi:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Yi! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'gemma2':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Gemma2? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o Gemma2... ✨`).then(() => {
-          ia.makeCognimaRequest('google/gemma-2-27b-it', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Gemma2:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Gemma2! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'swallow':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Swallow? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o Swallow... ✨`).then(() => {
-          ia.makeCognimaRequest('qwen/qwen3-235b-a22b', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Swallow:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Swallow! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'falcon':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Falcon? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o Falcon... ✨`).then(() => {
-          ia.makeCognimaRequest('tiiuae/falcon3-7b-instruct', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Falcon:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Falcon! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'qwencoder':
-        if (!q) return reply(`🤔 Qual sua dúvida para o Qwencoder? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o Qwencoder... ✨`).then(() => {
-          ia.makeCognimaRequest('qwen/qwen2.5-coder-32b-instruct', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API Qwencoder:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o Qwencoder! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'codegemma':
-        if (!q) return reply(`🤔 Qual sua dúvida para o CodeGemma? Informe a pergunta após o comando! Exemplo: ${prefix}${command} quem descobriu o Brasil? 🌍`);
-
-        reply(`⏳ Só um segundinho, estou consultando o CodeGemma... ✨`).then(() => {
-          ia.makeCognimaRequest('google/codegemma-7b', q, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro na API CodeGemma:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply(`😓 Poxa, algo deu errado com o CodeGemma! Tente novamente em alguns instantes, tá? 🌈`);
-            }
-          });
-        });
-        break;
-      case 'resumir':
-        if (!q) return reply(`📝 *Resumidor de Texto*\n\n💡 *Como usar:*\n• Envie o texto que deseja resumir após o comando\n• Ex: ${prefix}resumir [seu texto aqui]\n\n✨ O texto será resumido de forma clara e objetiva!`);
-
-        reply('⏳ Aguarde enquanto preparo um resumo bem caprichado... ✨').then(() => {
-          const prompt = `Resuma o seguinte texto em poucos parágrafos, de forma clara e objetiva, destacando as informações mais importantes:\n\n${q}`;
-          ia.makeCognimaRequest('qwen/qwen3-235b-a22b', prompt, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro ao resumir texto:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply('😓 Ops, não consegui resumir agora! Que tal tentar de novo? 🌟');
-            }
-          });
-        });
-        break;
-      case 'resumirurl':
-        if (!q) return reply(`🌐 Quer resumir uma página? Envie a URL após o comando ${prefix}resumirurl! Exemplo: ${prefix}resumirurl https://exemplo.com/artigo 😊`);
-
-        if (!q.startsWith('http://') && !q.startsWith('https://')) {
-          return reply(`🚫 Ops, parece que a URL é inválida! Certifique-se de incluir http:// ou https://. Exemplo: ${prefix}resumirurl https://exemplo.com/artigo 😊`);
-        }
-        reply('⏳ Aguarde enquanto busco e resumo a página para você... ✨').then(() => {
-          axios.get(q, {
-            timeout: 120000,
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; Bot/1.0)'
-            }
-          }).then((response) => {
-            const { document } = parseHTML(response.data);
-            document.querySelectorAll('script, style, noscript, iframe').forEach(el => el.remove());
-            const cleanText = document.body.textContent.replace(/\s+/g, ' ').trim();
-            if (!cleanText || cleanText.length < 50) {
-              reply(`😓 Ops, não encontrei conteúdo suficiente para resumir nessa página! Tente outra URL, tá? 🌐`);
-              return;
-            }
-            const prompt = `Resuma o seguinte conteúdo extraído de uma página web em poucos parágrafos, de forma clara e objetiva, destacando os pontos principais:\n\n${cleanText.substring(0, 5000)}`;
-            ia.makeCognimaRequest('qwen/qwen3-235b-a22b', prompt, null).then((iaResponse) => {
-              reply(formatAIResponse(iaResponse.data.choices[0].message.content));
-            }).catch((e) => {
-              console.error('Erro ao resumir URL (IA):', e.message);
-              if (e.message && e.message.includes('API key inválida')) {
-
-                reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-              } else {
-                reply('😓 Vixe, algo deu errado ao resumir a página! Tente novamente em breve, combinado? 🌈');
-              }
-            });
-          }).catch((e) => {
-            console.error('Erro ao resumir URL:', e.message);
-            if (e.code === 'ECONNABORTED') {
-              reply('😓 Ops, a página demorou muito para responder! Tente outra URL. 🌐');
-            } else if (e.response) {
-              reply(`😓 Não consegui acessar a página (código ${e.response.status}). Verifique a URL e tente novamente, tá? 🌟`);
-            } else {
-              reply('😓 Vixe, algo deu errado ao resumir a página! Tente novamente em breve, combinado? 🌈');
-            }
-          });
-        });
-        break;
-      case 'ideias':
-      case 'ideia':
-        if (!q) return reply(`💡 Quer ideias criativas? Diga o tema após o comando ${prefix}ideias! Exemplo: ${prefix}ideias nomes para um aplicativo de receitas 😊`);
-
-        reply('⏳ Um segundinho, estou pensando em ideias incríveis... ✨').then(() => {
-          const prompt = `Gere 15 ideias criativas e detalhadas para o seguinte tema: ${q}`;
-          ia.makeCognimaRequest('qwen/qwen3-235b-a22b', prompt, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro ao gerar ideias:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply('😓 Poxa, não consegui gerar ideias agora! Tente de novo em breve, tá? 🌈');
-            }
-          });
-        });
-        break;
-      case 'explicar':
-      case 'explique':
-        if (!q) return reply(`🤓 Quer entender algo? Diga o que deseja explicar após o comando ${prefix}explicar! Exemplo: ${prefix}explicar o que é inteligência artificial 😊`);
-
-        reply('⏳ Um momentinho, estou preparando uma explicação bem clara... ✨').then(() => {
-          const prompt = `Explique o seguinte conceito de forma simples e clara, como se fosse para alguém sem conhecimento prévio: ${q}`;
-          ia.makeCognimaRequest('qwen/qwen3-235b-a22b', prompt, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro ao explicar conceito:', e);
-            if (e.message && e.message.includes('API key inválida')) {
-
-              reply('🤖 *Sistema de IA temporariamente indisponível*\n\n😅 Estou com problemas técnicos no momento. O administrador já foi notificado!\n\n⏰ Tente novamente em alguns minutos.');
-            } else {
-              reply('😓 Vixe, não consegui explicar agora! Tente de novo em alguns instantes, tá? 🌈');
-            }
-          });
-        });
-        break;
-      case 'corrigir':
-      case 'correcao':
-        if (!q) return reply(`✍️ Quer corrigir um texto? Envie o texto após o comando ${prefix}corrigir! Exemplo: ${prefix}corrigir Eu foi no mercado e comprei frutas. 😊`);
-
-        reply('⏳ Aguarde enquanto dou um polimento no seu texto... ✨').then(() => {
-          const prompt = `Corrija os erros gramaticais, ortográficos e de estilo no seguinte texto, mantendo o significado original: ${q}`;
-          ia.makeCognimaRequest('qwen/qwen3-235b-a22b', prompt, null).then((response) => {
-            reply(formatAIResponse(response.data.choices[0].message.content));
-          }).catch((e) => {
-            console.error('Erro ao corrigir texto:', e);
-            reply('😓 Ops, não consegui corrigir o texto agora! Tente novamente, tá? 🌟');
-          });
-        });
-        break;
 
       // ═══════════════════════════════════════════════════════════════
       // 💬 RESUMIDOR DE CONVERSAS DO GRUPO
@@ -16388,429 +15989,429 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
         break;
 
 
-case 'addsubbot': {
-try {
+      case 'addsubbot': {
+        try {
 
-if (!isOwner) {
-return reply(
-'🚫 Apenas o Dono principal pode adicionar sub-bots!'
-)
-}
+          if (!isOwner) {
+            return reply(
+              '🚫 Apenas o Dono principal pode adicionar sub-bots!'
+            )
+          }
 
-const subBotManager =
-await import(
-'./utils/subBotManager.js'
-)
+          const subBotManager =
+            await import(
+              './utils/subBotManager.js'
+            )
 
-if (!q?.trim()) {
-return reply(
-`📝 Uso:
+          if (!q?.trim()) {
+            return reply(
+              `📝 Uso:
 ${prefix}addsubbot <numero|@lid>
 
 Ex:
 ${prefix}addsubbot 5511999999999
 ${prefix}addsubbot @152656307871952`
-)
-}
-
-console.log(info)
-
-console.log(
-'[ADDSUBBOT] q:',
-q
-)
-
-let input =
-q.trim()
-
-let subBotLid =
-null
-
-let phoneNumber =
-null
-
-let mentionedPhone =
-null
-
-// ======================
-// BUSCAR PARTICIPANTE
-// ======================
-
-try {
-
-if (
-info?.key?.remoteJid?.endsWith(
-'@g.us'
-)
-) {
-
-const mentionedId =
-input
-.replace(
-/\D/g,
-''
-)
-.trim()
-
-if (
-mentionedId
-) {
-
-const metadata =
-await nazu.groupMetadata(
-info.key.remoteJid
-)
-
-console.log(
-'[ADDSUBBOT] Grupo:',
-{
-id:
-metadata.id,
-
-nome:
-metadata.subject,
-
-membros:
-metadata.participants.length
-}
-)
-
-const participante =
-metadata.participants.find(
-p =>
-p.id ===
-`${mentionedId}@lid`
-||
-p.lid ===
-`${mentionedId}@lid`
-)
-
-if (
-participante
-) {
-
-mentionedPhone =
-(
-participante.phoneNumber ||
-''
-)
-.replace(
-'@s.whatsapp.net',
-''
-)
-.replace(
-/\D/g,
-''
-)
-
-console.log(
-'[ADDSUBBOT] Usuário mencionado encontrado:'
-)
-
-console.dir(
-{
-id:
-participante.id,
+            )
+          }
+
+          console.log(info)
+
+          console.log(
+            '[ADDSUBBOT] q:',
+            q
+          )
+
+          let input =
+            q.trim()
+
+          let subBotLid =
+            null
+
+          let phoneNumber =
+            null
+
+          let mentionedPhone =
+            null
+
+          // ======================
+          // BUSCAR PARTICIPANTE
+          // ======================
+
+          try {
+
+            if (
+              info?.key?.remoteJid?.endsWith(
+                '@g.us'
+              )
+            ) {
+
+              const mentionedId =
+                input
+                  .replace(
+                    /\D/g,
+                    ''
+                  )
+                  .trim()
+
+              if (
+                mentionedId
+              ) {
+
+                const metadata =
+                  await nazu.groupMetadata(
+                    info.key.remoteJid
+                  )
+
+                console.log(
+                  '[ADDSUBBOT] Grupo:',
+                  {
+                    id:
+                      metadata.id,
+
+                    nome:
+                      metadata.subject,
+
+                    membros:
+                      metadata.participants.length
+                  }
+                )
+
+                const participante =
+                  metadata.participants.find(
+                    p =>
+                      p.id ===
+                      `${mentionedId}@lid`
+                      ||
+                      p.lid ===
+                      `${mentionedId}@lid`
+                  )
+
+                if (
+                  participante
+                ) {
+
+                  mentionedPhone =
+                    (
+                      participante.phoneNumber ||
+                      ''
+                    )
+                      .replace(
+                        '@s.whatsapp.net',
+                        ''
+                      )
+                      .replace(
+                        /\D/g,
+                        ''
+                      )
+
+                  console.log(
+                    '[ADDSUBBOT] Usuário mencionado encontrado:'
+                  )
+
+                  console.dir(
+                    {
+                      id:
+                        participante.id,
 
-phoneNumber:
-participante.phoneNumber,
+                      phoneNumber:
+                        participante.phoneNumber,
 
-phoneExtraido:
-mentionedPhone,
+                      phoneExtraido:
+                        mentionedPhone,
 
-lid:
-participante.lid,
+                      lid:
+                        participante.lid,
 
-admin:
-participante.admin,
+                      admin:
+                        participante.admin,
 
-objetoCompleto:
-participante
-},
-{
-depth:
-null
-}
-)
-
-}
-
-else {
-
-console.log(
-'[ADDSUBBOT] Usuário não encontrado'
-)
-
-}
-
-}
-
-}
-
-}
-
-catch (err) {
-
-console.log(
-'[ADDSUBBOT] Erro ao buscar participante:',
-err
-)
-
-}
-
-// ======================
-// IDENTIFICAR SUBBOT
-// ======================
-
-// CASO 1 → marcou LID
-if (
-input.startsWith('@')
-&&
-input
-.replace(
-/\D/g,
-''
-)
-.length >= 12
-) {
-
-const lid =
-input
-.replace(
-/\D/g,
-''
-)
-
-subBotLid =
-`${lid}@lid`
-
-console.log(
-'[ADDSUBBOT] LID detectado:',
-subBotLid
-)
-
-}
-
-// CASO 2 → enviou LID completo
-else if (
-input.endsWith(
-'@lid'
-)
-) {
-
-subBotLid =
-input
-
-console.log(
-'[ADDSUBBOT] LID completo:',
-subBotLid
-)
-
-}
-
-// CASO 3 → enviou telefone
-else {
-
-phoneNumber =
-input
-.replace(
-/\D/g,
-''
-)
-
-console.log(
-'[ADDSUBBOT] Telefone:',
-phoneNumber
-)
-
-if (
-!/^\d{10,15}$/
-.test(
-phoneNumber
-)
-) {
-return reply(
-'❌ Número inválido.'
-)
-}
-
-const [result] =
-await nazu.onWhatsApp(
-phoneNumber
-)
-
-console.log(
-'[ADDSUBBOT] Resultado:',
-result
-)
-
-if (
-!result?.exists
-) {
-return reply(
-'❌ Número não existe no WhatsApp.'
-)
-}
-
-if (
-result?.jid
-?.includes(
-'@s.whatsapp.net'
-)
-) {
-
-try {
-
-const lid =
-await getLidFromJidCached(
-nazu,
-result.jid
-)
-
-console.log(
-'[ADDSUBBOT] JID →',
-lid
-)
-
-if (
-lid
-?.includes(
-'@lid'
-)
-) {
-subBotLid =
-lid
-}
-
-}
-
-catch {}
-
-}
-
-if (
-!subBotLid
-&&
-result?.lid
-) {
-subBotLid =
-result.lid
-}
-
-}
-
-// ======================
-// VALIDAR LID
-// ======================
-
-console.log(
-'[ADDSUBBOT] SubBot LID final:',
-subBotLid
-)
-
-if (
-!subBotLid
-||
-!subBotLid.includes(
-'@lid'
-)
-) {
-
-return reply(
-'❌ LID do sub-bot inválido!'
-)
-
-}
-
-// ======================
-// OWNER
-// ======================
-
-const ownerCandidate =
-buildUserId(
-numerodono,
-config
-)
-
-const ownerLid =
-await getLidFromJidCached(
-nazu,
-ownerCandidate
-)
-
-console.log(
-'[ADDSUBBOT] Owner:',
-ownerLid
-)
-
-// ======================
-// DEFINIR NÚMERO FINAL
-// ======================
-
-const numeroFinal =
-mentionedPhone
-||
-phoneNumber
-
-if (
-!numeroFinal
-) {
-
-return reply(
-'❌ Não consegui obter o número do sub-bot.'
-)
-
-}
-
-console.log(
-'[ADDSUBBOT] Dados finais:',
-{
-subBotLid,
-mentionedPhone,
-phoneNumber,
-numeroFinal,
-ownerLid
-}
-)
-
-// ======================
-// CRIAR
-// ======================
-
-const addResult =
-await subBotManager
-.addSubBot(
-numeroFinal,
-ownerLid,
-subBotLid
-)
-
-console.log(
-'[ADDSUBBOT] Resultado:',
-addResult
-)
-
-return reply(
-addResult.message
-)
-
-}
-
-catch (error) {
-
-console.error(
-'[ADDSUBBOT]',
-error
-)
-
-return reply(
-`❌ ${error.message}`
-)
-
-}
-
-}
-break
+                      objetoCompleto:
+                        participante
+                    },
+                    {
+                      depth:
+                        null
+                    }
+                  )
+
+                }
+
+                else {
+
+                  console.log(
+                    '[ADDSUBBOT] Usuário não encontrado'
+                  )
+
+                }
+
+              }
+
+            }
+
+          }
+
+          catch (err) {
+
+            console.log(
+              '[ADDSUBBOT] Erro ao buscar participante:',
+              err
+            )
+
+          }
+
+          // ======================
+          // IDENTIFICAR SUBBOT
+          // ======================
+
+          // CASO 1 → marcou LID
+          if (
+            input.startsWith('@')
+            &&
+            input
+              .replace(
+                /\D/g,
+                ''
+              )
+              .length >= 12
+          ) {
+
+            const lid =
+              input
+                .replace(
+                  /\D/g,
+                  ''
+                )
+
+            subBotLid =
+              `${lid}@lid`
+
+            console.log(
+              '[ADDSUBBOT] LID detectado:',
+              subBotLid
+            )
+
+          }
+
+          // CASO 2 → enviou LID completo
+          else if (
+            input.endsWith(
+              '@lid'
+            )
+          ) {
+
+            subBotLid =
+              input
+
+            console.log(
+              '[ADDSUBBOT] LID completo:',
+              subBotLid
+            )
+
+          }
+
+          // CASO 3 → enviou telefone
+          else {
+
+            phoneNumber =
+              input
+                .replace(
+                  /\D/g,
+                  ''
+                )
+
+            console.log(
+              '[ADDSUBBOT] Telefone:',
+              phoneNumber
+            )
+
+            if (
+              !/^\d{10,15}$/
+                .test(
+                  phoneNumber
+                )
+            ) {
+              return reply(
+                '❌ Número inválido.'
+              )
+            }
+
+            const [result] =
+              await nazu.onWhatsApp(
+                phoneNumber
+              )
+
+            console.log(
+              '[ADDSUBBOT] Resultado:',
+              result
+            )
+
+            if (
+              !result?.exists
+            ) {
+              return reply(
+                '❌ Número não existe no WhatsApp.'
+              )
+            }
+
+            if (
+              result?.jid
+                ?.includes(
+                  '@s.whatsapp.net'
+                )
+            ) {
+
+              try {
+
+                const lid =
+                  await getLidFromJidCached(
+                    nazu,
+                    result.jid
+                  )
+
+                console.log(
+                  '[ADDSUBBOT] JID →',
+                  lid
+                )
+
+                if (
+                  lid
+                    ?.includes(
+                      '@lid'
+                    )
+                ) {
+                  subBotLid =
+                    lid
+                }
+
+              }
+
+              catch { }
+
+            }
+
+            if (
+              !subBotLid
+              &&
+              result?.lid
+            ) {
+              subBotLid =
+                result.lid
+            }
+
+          }
+
+          // ======================
+          // VALIDAR LID
+          // ======================
+
+          console.log(
+            '[ADDSUBBOT] SubBot LID final:',
+            subBotLid
+          )
+
+          if (
+            !subBotLid
+            ||
+            !subBotLid.includes(
+              '@lid'
+            )
+          ) {
+
+            return reply(
+              '❌ LID do sub-bot inválido!'
+            )
+
+          }
+
+          // ======================
+          // OWNER
+          // ======================
+
+          const ownerCandidate =
+            buildUserId(
+              numerodono,
+              config
+            )
+
+          const ownerLid =
+            await getLidFromJidCached(
+              nazu,
+              ownerCandidate
+            )
+
+          console.log(
+            '[ADDSUBBOT] Owner:',
+            ownerLid
+          )
+
+          // ======================
+          // DEFINIR NÚMERO FINAL
+          // ======================
+
+          const numeroFinal =
+            mentionedPhone
+            ||
+            phoneNumber
+
+          if (
+            !numeroFinal
+          ) {
+
+            return reply(
+              '❌ Não consegui obter o número do sub-bot.'
+            )
+
+          }
+
+          console.log(
+            '[ADDSUBBOT] Dados finais:',
+            {
+              subBotLid,
+              mentionedPhone,
+              phoneNumber,
+              numeroFinal,
+              ownerLid
+            }
+          )
+
+          // ======================
+          // CRIAR
+          // ======================
+
+          const addResult =
+            await subBotManager
+              .addSubBot(
+                numeroFinal,
+                ownerLid,
+                subBotLid
+              )
+
+          console.log(
+            '[ADDSUBBOT] Resultado:',
+            addResult
+          )
+
+          return reply(
+            addResult.message
+          )
+
+        }
+
+        catch (error) {
+
+          console.error(
+            '[ADDSUBBOT]',
+            error
+          )
+
+          return reply(
+            `❌ ${error.message}`
+          )
+
+        }
+
+      }
+        break
 
       case 'removesubbot':
       case 'delsubbot':
@@ -17441,58 +17042,58 @@ break
         break;
 
 
-case 'addaluguel':
-    console.log('📌 Comando addaluguel iniciado');
-    console.log('👤 isOwner:', isOwner);
-    console.log('👥 isGroup:', isGroup);
-    console.log('📝 Texto recebido (q):', q);
-    console.log('🏷️ Grupo ID (from):', from);
+      case 'addaluguel':
+        console.log('📌 Comando addaluguel iniciado');
+        console.log('👤 isOwner:', isOwner);
+        console.log('👥 isGroup:', isGroup);
+        console.log('📝 Texto recebido (q):', q);
+        console.log('🏷️ Grupo ID (from):', from);
 
-    if (!isOwner) {
-        console.log('🚫 Bloqueado: usuário não é dono');
-        return reply("🚫 Apenas o Dono principal pode adicionar aluguel!");
-    }
-
-    if (!isGroup) {
-        console.log('🚫 Bloqueado: comando não foi usado em grupo');
-        return reply("Este comando só pode ser usado em grupos.");
-    }
-
-    try {
-        const parts = q.toLowerCase().trim().split(' ');
-        console.log('🔍 Partes do argumento:', parts);
-
-        const durationArg = parts[0];
-        console.log('⏳ Duração recebida:', durationArg);
-
-        let durationDays = null;
-
-        if (durationArg === 'permanente') {
-            durationDays = 'permanent';
-            console.log('♾️ Aluguel permanente detectado');
-        } else if (!isNaN(parseInt(durationArg)) && parseInt(durationArg) > 0) {
-            durationDays = parseInt(durationArg);
-            console.log('📅 Aluguel por dias:', durationDays);
-        } else {
-            console.log('❌ Duração inválida:', durationArg);
-            return reply(`🤔 Duração inválida. Use um número de dias (ex: 30) ou a palavra "permanente".\nExemplo: ${prefix}addaluguel 30`);
+        if (!isOwner) {
+          console.log('🚫 Bloqueado: usuário não é dono');
+          return reply("🚫 Apenas o Dono principal pode adicionar aluguel!");
         }
 
-        console.log('📤 Enviando para setGroupRental...');
-        const result = setGroupRental(from, durationDays);
+        if (!isGroup) {
+          console.log('🚫 Bloqueado: comando não foi usado em grupo');
+          return reply("Este comando só pode ser usado em grupos.");
+        }
 
-        console.log('✅ Resultado do setGroupRental:', result);
+        try {
+          const parts = q.toLowerCase().trim().split(' ');
+          console.log('🔍 Partes do argumento:', parts);
 
-        await reply(result.message);
-        console.log('📩 Resposta enviada ao usuário');
+          const durationArg = parts[0];
+          console.log('⏳ Duração recebida:', durationArg);
 
-    } catch (e) {
-        console.error("💥 Erro no comando addaluguel:", e);
-        await reply("❌ Ocorreu um erro inesperado ao adicionar o aluguel.");
-    }
+          let durationDays = null;
 
-    console.log('🏁 Fim do comando addaluguel');
-    break;
+          if (durationArg === 'permanente') {
+            durationDays = 'permanent';
+            console.log('♾️ Aluguel permanente detectado');
+          } else if (!isNaN(parseInt(durationArg)) && parseInt(durationArg) > 0) {
+            durationDays = parseInt(durationArg);
+            console.log('📅 Aluguel por dias:', durationDays);
+          } else {
+            console.log('❌ Duração inválida:', durationArg);
+            return reply(`🤔 Duração inválida. Use um número de dias (ex: 30) ou a palavra "permanente".\nExemplo: ${prefix}addaluguel 30`);
+          }
+
+          console.log('📤 Enviando para setGroupRental...');
+          const result = setGroupRental(from, durationDays);
+
+          console.log('✅ Resultado do setGroupRental:', result);
+
+          await reply(result.message);
+          console.log('📩 Resposta enviada ao usuário');
+
+        } catch (e) {
+          console.error("💥 Erro no comando addaluguel:", e);
+          await reply("❌ Ocorreu um erro inesperado ao adicionar o aluguel.");
+        }
+
+        console.log('🏁 Fim do comando addaluguel');
+        break;
 
       case 'listaraluguel':
       case 'veralugueis':
@@ -19894,55 +19495,55 @@ case 'addaluguel':
         }
         break;
 
-case 'pinterest':
-case 'pin':
-  try {
-    if (!q) return reply('Digite o termo para pesquisar no Pinterest. Exemplo: ' + prefix + 'pinterest gatinhos');
+      case 'pinterest':
+      case 'pin':
+        try {
+          if (!q) return reply('Digite o termo para pesquisar no Pinterest. Exemplo: ' + prefix + 'pinterest gatinhos');
 
-    const PIN_URL_REGEX = /^(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?pinterest\.\w{2,6}(?:\.\w{2})?\/pin\/([0-9a-zA-Z]+)|^https?:\/\/pin\.it\/[a-zA-Z0-9]+/i;
+          const PIN_URL_REGEX = /^(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?pinterest\.\w{2,6}(?:\.\w{2})?\/pin\/([0-9a-zA-Z]+)|^https?:\/\/pin\.it\/[a-zA-Z0-9]+/i;
 
-    const searchTerm = q.trim();
-    const isPinUrl = PIN_URL_REGEX.test(searchTerm);
+          const searchTerm = q.trim();
+          const isPinUrl = PIN_URL_REGEX.test(searchTerm);
 
-    const datinha = await (isPinUrl
-      ? pinterest.dl(searchTerm)
-      : pinterest.search(searchTerm)
-    );
+          const datinha = await (isPinUrl
+            ? pinterest.dl(searchTerm)
+            : pinterest.search(searchTerm)
+          );
 
 
-    if (typeof datinha === 'string') {
-      return reply(datinha);
-    }
+          if (typeof datinha === 'string') {
+            return reply(datinha);
+          }
 
-    if (!datinha.ok) {
-      return reply(datinha.msg);
-    }
+          if (!datinha.ok) {
+            return reply(datinha.msg);
+          }
 
-    if (!datinha.urls || datinha.urls.length === 0) {
-      return reply(isPinUrl
-        ? 'Não foi possível baixar este link do Pinterest. 😕'
-        : 'Nenhuma imagem encontrada para o termo pesquisado. 😕'
-      );
-    }
+          if (!datinha.urls || datinha.urls.length === 0) {
+            return reply(isPinUrl
+              ? 'Não foi possível baixar este link do Pinterest. 😕'
+              : 'Nenhuma imagem encontrada para o termo pesquisado. 😕'
+            );
+          }
 
-    const itemsToSend = datinha.urls.slice(0, 3);
+          const itemsToSend = datinha.urls.slice(0, 3);
 
-    for (const url of itemsToSend) {
-      await nazu.sendMessage(from, {
-        image: { url },
-        caption: isPinUrl
-          ? '📌 Download do Pinterest'
-          : `📌 Resultado da pesquisa por "${searchTerm}"`
-      }, { quoted: info });
-    }
+          for (const url of itemsToSend) {
+            await nazu.sendMessage(from, {
+              image: { url },
+              caption: isPinUrl
+                ? '📌 Download do Pinterest'
+                : `📌 Resultado da pesquisa por "${searchTerm}"`
+            }, { quoted: info });
+          }
 
-  } catch (e) {
-    console.error('Erro no comando pinterest:', e);
-    reply("Ocorreu um erro ao processar o Pinterest 💔");
-  }
-  break;
-  
-              case 'play2':
+        } catch (e) {
+          console.error('Erro no comando pinterest:', e);
+          reply("Ocorreu um erro ao processar o Pinterest 💔");
+        }
+        break;
+
+      case 'play2':
       case 'playspotify':
         try {
           if (!q) {
@@ -20958,95 +20559,95 @@ Se não definir cores, a API usa padrão automaticamente.`
         }
         break;
 
-case 'zipbot':
-case 'zip-bot':
-case 'botzip':
-case 'bot-zip':
-case 'downloadbot':
-case 'download-bot':
-  try {
+      case 'zipbot':
+      case 'zip-bot':
+      case 'botzip':
+      case 'bot-zip':
+      case 'downloadbot':
+      case 'download-bot':
+        try {
 
-    await reply(
-      '📦 Baixando o código-fonte do bot... Aguarde!'
-    );
+          await reply(
+            '📦 Baixando o código-fonte do bot... Aguarde!'
+          );
 
-    let githubUrl = config.github_ofc;
+          let githubUrl = config.github_ofc;
 
-    if (githubUrl.endsWith('.git')) {
-      githubUrl = githubUrl.replace('.git', '');
-    }
+          if (githubUrl.endsWith('.git')) {
+            githubUrl = githubUrl.replace('.git', '');
+          }
 
-    if (!githubUrl.includes('/archive/refs/heads/')) {
-      githubUrl += '/archive/refs/heads/main.zip';
-    }
+          if (!githubUrl.includes('/archive/refs/heads/')) {
+            githubUrl += '/archive/refs/heads/main.zip';
+          }
 
-    console.log('[ZIPBOT] URL:', githubUrl);
+          console.log('[ZIPBOT] URL:', githubUrl);
 
-    const zipResponse = await axios.get(
-      githubUrl,
-      {
-        responseType: 'arraybuffer',
-        timeout: 60000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0'
+          const zipResponse = await axios.get(
+            githubUrl,
+            {
+              responseType: 'arraybuffer',
+              timeout: 60000,
+              headers: {
+                'User-Agent': 'Mozilla/5.0'
+              }
+            }
+          );
+
+          const zipBuffer = Buffer.from(zipResponse.data);
+
+          console.log(
+            '[ZIPBOT] Tamanho:',
+            zipBuffer.length
+          );
+
+          if (!zipBuffer || zipBuffer.length < 1000) {
+            throw new Error(
+              'Arquivo ZIP inválido ou vazio.'
+            );
+          }
+
+          await nazu.sendMessage(
+            from,
+            {
+              document: zipBuffer,
+              fileName: 'nazuna-bot.zip',
+              mimetype: 'application/zip',
+              caption:
+                `📦 *Código-fonte do ${nomebot}*\n\n` +
+                `📖 Leia a documentação no repositório para entender melhor como instalar:\n` +
+                `🔗 ${config.github_ofc}\n\n` +
+                `⚠️ *Importante:* Certifique-se de ter Node.js instalado e siga os passos do README.md!`
+            },
+            {
+              quoted: info
+            }
+          );
+
+        } catch (e) {
+
+          console.error(
+            'Erro ao baixar zip do bot:',
+            e
+          );
+
+          const errorMsg =
+            e.response?.status === 404
+              ? '❌ Repositório não encontrado.'
+              : e.code === 'ECONNABORTED' ||
+                e.code === 'ETIMEDOUT'
+                ? '❌ Tempo de conexão esgotado. Tente novamente.'
+                : '❌ Erro ao baixar o arquivo.';
+
+          await reply(
+            `${errorMsg}\n\nTente acessar diretamente:\n🔗 ${config.github_ofc}`
+          );
+
         }
-      }
-    );
-
-    const zipBuffer = Buffer.from(zipResponse.data);
-
-    console.log(
-      '[ZIPBOT] Tamanho:',
-      zipBuffer.length
-    );
-
-    if (!zipBuffer || zipBuffer.length < 1000) {
-      throw new Error(
-        'Arquivo ZIP inválido ou vazio.'
-      );
-    }
-
-    await nazu.sendMessage(
-      from,
-      {
-        document: zipBuffer,
-        fileName: 'nazuna-bot.zip',
-        mimetype: 'application/zip',
-        caption:
-          `📦 *Código-fonte do ${nomebot}*\n\n` +
-          `📖 Leia a documentação no repositório para entender melhor como instalar:\n` +
-          `🔗 ${config.github_ofc}\n\n` +
-          `⚠️ *Importante:* Certifique-se de ter Node.js instalado e siga os passos do README.md!`
-      },
-      {
-        quoted: info
-      }
-    );
-
-  } catch (e) {
-
-    console.error(
-      'Erro ao baixar zip do bot:',
-      e
-    );
-
-    const errorMsg =
-      e.response?.status === 404
-        ? '❌ Repositório não encontrado.'
-        : e.code === 'ECONNABORTED' ||
-          e.code === 'ETIMEDOUT'
-          ? '❌ Tempo de conexão esgotado. Tente novamente.'
-          : '❌ Erro ao baixar o arquivo.';
-
-    await reply(
-      `${errorMsg}\n\nTente acessar diretamente:\n🔗 ${config.github_ofc}`
-    );
-
-  }
-break;
+        break;
 
 
-        case 'gitbot':
+      case 'gitbot':
       case 'git-bot':
       case 'github':
       case 'git-hub':
@@ -21248,16 +20849,7 @@ break;
           await reply("❌ Ocorreu um erro ao carregar o menu de alteradores");
         }
         break;
-      case 'menuia':
-      case 'aimenu':
-      case 'menuias':
-        try {
-          await sendMenuWithMedia('ia', menuIa);
-        } catch (error) {
-          console.error('Erro ao enviar menu de IA:', error);
-          await reply("❌ Ocorreu um erro ao carregar o menu de IA");
-        }
-        break;
+
       case 'menulogo':
       case 'menulogos':
         try {
@@ -21268,13 +20860,13 @@ break;
         }
         break;
 
-case 'nazuna':
-  try {
-    const lerMaisPrefix = getMenuLerMaisText();
-    const cleanLink = 'https://nubank.com.br/cobrar/133oy9/6a39d128-5419-4b04-a105-b7bd2d290c65';
+      case 'nazuna':
+        try {
+          const lerMaisPrefix = getMenuLerMaisText();
+          const cleanLink = 'https://nubank.com.br/cobrar/133oy9/6a39d128-5419-4b04-a105-b7bd2d290c65';
 
-    const texto =
-`🍓 *NAZUNA BOT*
+          const texto =
+            `🍓 *NAZUNA BOT*
 
 Nazuna é um bot de alta performance no whatsapp
 
@@ -21301,23 +20893,23 @@ ${lerMaisPrefix}
 ${cleanLink}
 `;
 
-    const imgPath = __dirname + '/../midias/menu.jpg';
+          const imgPath = __dirname + '/../midias/menu.jpg';
 
-    if (!fs.existsSync(imgPath)) {
-      return reply("❌ Imagem do menu não encontrada. Defina ela primeiro.");
-    }
+          if (!fs.existsSync(imgPath)) {
+            return reply("❌ Imagem do menu não encontrada. Defina ela primeiro.");
+          }
 
-    await nazu.sendMessage(from, {
-      image: fs.readFileSync(imgPath),
-      caption: texto
-    }, { quoted: info });
+          await nazu.sendMessage(from, {
+            image: fs.readFileSync(imgPath),
+            caption: texto
+          }, { quoted: info });
 
-  } catch (error) {
-    console.error('Erro ao enviar menu Nazuna:', error);
-    reply("❌ Ocorreu um erro ao carregar o menu Nazuna");
-  }
-  break;
-  
+        } catch (error) {
+          console.error('Erro ao enviar menu Nazuna:', error);
+          reply("❌ Ocorreu um erro ao carregar o menu Nazuna");
+        }
+        break;
+
       case 'edits':
       case 'menuedits':
         try {
@@ -22745,119 +22337,119 @@ Precisa de ajuda? Entre em contato:
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
-        
-        
-case 'addcmd-subdono':
-  if (!isOwner) return reply("Este comando é apenas para o meu dono");
 
-  try {
-    const cmdToAdd = q?.toLowerCase().trim();
 
-    if (!cmdToAdd) {
-      return reply(
-        '❌ Informe o comando a adicionar!\nEx.: ' +
-        prefix + 'addcmd-subdono play'
-      );
-    }
+      case 'addcmd-subdono':
+        if (!isOwner) return reply("Este comando é apenas para o meu dono");
 
-    const subOwnerFile = pathz.join(DATABASE_DIR, 'subOwnerCommands.json');
+        try {
+          const cmdToAdd = q?.toLowerCase().trim();
 
-    let subOwnerCommands = [];
+          if (!cmdToAdd) {
+            return reply(
+              '❌ Informe o comando a adicionar!\nEx.: ' +
+              prefix + 'addcmd-subdono play'
+            );
+          }
 
-    if (fs.existsSync(subOwnerFile)) {
-      subOwnerCommands = JSON.parse(fs.readFileSync(subOwnerFile));
-    }
+          const subOwnerFile = pathz.join(DATABASE_DIR, 'subOwnerCommands.json');
 
-    if (subOwnerCommands.includes(cmdToAdd)) {
-      return reply(`❌ O comando *${cmdToAdd}* já está liberado para subdonos!`);
-    }
+          let subOwnerCommands = [];
 
-    subOwnerCommands.push(cmdToAdd);
+          if (fs.existsSync(subOwnerFile)) {
+            subOwnerCommands = JSON.parse(fs.readFileSync(subOwnerFile));
+          }
 
-    fs.writeFileSync(
-      subOwnerFile,
-      JSON.stringify(subOwnerCommands, null, 2)
-    );
+          if (subOwnerCommands.includes(cmdToAdd)) {
+            return reply(`❌ O comando *${cmdToAdd}* já está liberado para subdonos!`);
+          }
 
-    await reply(`✅ Comando *${cmdToAdd}* adicionado para subdonos!`);
-  } catch (e) {
-    console.error(e);
-    await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
-  }
-  break;
-  
-  
-  case 'removecmd-subdono':
-  if (!isOwner) return reply("Este comando é apenas para o meu dono");
+          subOwnerCommands.push(cmdToAdd);
 
-  try {
-    const cmdToRemove = q?.toLowerCase().trim();
+          fs.writeFileSync(
+            subOwnerFile,
+            JSON.stringify(subOwnerCommands, null, 2)
+          );
 
-    if (!cmdToRemove) {
-      return reply(
-        '❌ Informe o comando a remover!\nEx.: ' +
-        prefix + 'removecmd-subdono play'
-      );
-    }
+          await reply(`✅ Comando *${cmdToAdd}* adicionado para subdonos!`);
+        } catch (e) {
+          console.error(e);
+          await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
+        }
+        break;
 
-    const subOwnerFile = pathz.join(DATABASE_DIR, 'subOwnerCommands.json');
 
-    let subOwnerCommands = [];
+      case 'removecmd-subdono':
+        if (!isOwner) return reply("Este comando é apenas para o meu dono");
 
-    if (fs.existsSync(subOwnerFile)) {
-      subOwnerCommands = JSON.parse(fs.readFileSync(subOwnerFile));
-    }
+        try {
+          const cmdToRemove = q?.toLowerCase().trim();
 
-    if (!subOwnerCommands.includes(cmdToRemove)) {
-      return reply(`❌ O comando *${cmdToRemove}* não está liberado!`);
-    }
+          if (!cmdToRemove) {
+            return reply(
+              '❌ Informe o comando a remover!\nEx.: ' +
+              prefix + 'removecmd-subdono play'
+            );
+          }
 
-    subOwnerCommands = subOwnerCommands.filter(
-      cmd => cmd !== cmdToRemove
-    );
+          const subOwnerFile = pathz.join(DATABASE_DIR, 'subOwnerCommands.json');
 
-    fs.writeFileSync(
-      subOwnerFile,
-      JSON.stringify(subOwnerCommands, null, 2)
-    );
+          let subOwnerCommands = [];
 
-    await reply(`✅ Comando *${cmdToRemove}* removido dos subdonos!`);
-  } catch (e) {
-    console.error(e);
-    await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
-  }
-  break;
-  
-  
-  case 'listcmd-subdono':
-  if (!isOwner) return reply("Este comando é apenas para o meu dono");
+          if (fs.existsSync(subOwnerFile)) {
+            subOwnerCommands = JSON.parse(fs.readFileSync(subOwnerFile));
+          }
 
-  try {
-    const subOwnerFile = pathz.join(DATABASE_DIR, 'subOwnerCommands.json');
+          if (!subOwnerCommands.includes(cmdToRemove)) {
+            return reply(`❌ O comando *${cmdToRemove}* não está liberado!`);
+          }
 
-    let subOwnerCommands = [];
+          subOwnerCommands = subOwnerCommands.filter(
+            cmd => cmd !== cmdToRemove
+          );
 
-    if (fs.existsSync(subOwnerFile)) {
-      subOwnerCommands = JSON.parse(fs.readFileSync(subOwnerFile));
-    }
+          fs.writeFileSync(
+            subOwnerFile,
+            JSON.stringify(subOwnerCommands, null, 2)
+          );
 
-    if (!subOwnerCommands.length) {
-      return reply('❌ Nenhum comando liberado para subdonos.');
-    }
+          await reply(`✅ Comando *${cmdToRemove}* removido dos subdonos!`);
+        } catch (e) {
+          console.error(e);
+          await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
+        }
+        break;
 
-    let txt = `📜 *Comandos liberados para subdonos:*\n\n`;
 
-    txt += subOwnerCommands
-      .map((cmd, i) => `${i + 1}. ${prefix}${cmd}`)
-      .join('\n');
+      case 'listcmd-subdono':
+        if (!isOwner) return reply("Este comando é apenas para o meu dono");
 
-    await reply(txt);
+        try {
+          const subOwnerFile = pathz.join(DATABASE_DIR, 'subOwnerCommands.json');
 
-  } catch (e) {
-    console.error(e);
-    await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
-  }
-  break;
+          let subOwnerCommands = [];
+
+          if (fs.existsSync(subOwnerFile)) {
+            subOwnerCommands = JSON.parse(fs.readFileSync(subOwnerFile));
+          }
+
+          if (!subOwnerCommands.length) {
+            return reply('❌ Nenhum comando liberado para subdonos.');
+          }
+
+          let txt = `📜 *Comandos liberados para subdonos:*\n\n`;
+
+          txt += subOwnerCommands
+            .map((cmd, i) => `${i + 1}. ${prefix}${cmd}`)
+            .join('\n');
+
+          await reply(txt);
+
+        } catch (e) {
+          console.error(e);
+          await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
+        }
+        break;
       case 'blockuserg':
         if (!isOwner) return reply("Este comando é apenas para o meu dono");
         try {
@@ -22968,52 +22560,52 @@ case 'addcmd-subdono':
         break;
 
 
-case 'nomedono':
+      case 'nomedono':
 
-  try {
+        try {
 
-    if (!isOwner) {
-      return reply("Este comando é exclusivo para o meu dono!");
-    }
+          if (!isOwner) {
+            return reply("Este comando é exclusivo para o meu dono!");
+          }
 
-    if (!q) {
-      return reply(
-        `⚙️ *Configuração do Nome do Dono*\n\n` +
-        `📝 *Como usar:*\n` +
-        `• Digite o novo nome após o comando\n` +
-        `• Ex: ${prefix}${command} Tokyo\n` +
-        `• Ex: ${prefix}${command} Vex Tech Solutions\n\n` +
-        `✅ O nome do dono será atualizado!`
-      );
-    }
+          if (!q) {
+            return reply(
+              `⚙️ *Configuração do Nome do Dono*\n\n` +
+              `📝 *Como usar:*\n` +
+              `• Digite o novo nome após o comando\n` +
+              `• Ex: ${prefix}${command} Tokyo\n` +
+              `• Ex: ${prefix}${command} Vex Tech Solutions\n\n` +
+              `✅ O nome do dono será atualizado!`
+            );
+          }
 
-    const novoNome = q.trim();
+          const novoNome = q.trim();
 
-    let config = JSON.parse(
-      fs.readFileSync(CONFIG_FILE)
-    );
+          let config = JSON.parse(
+            fs.readFileSync(CONFIG_FILE)
+          );
 
-    config.nomedono = novoNome;
+          config.nomedono = novoNome;
 
-    writeJsonFile(CONFIG_FILE, config);
+          writeJsonFile(CONFIG_FILE, config);
 
-    await reply(
-      `✅ Nome do dono alterado com sucesso para:\n👑 ${novoNome}`
-    );
+          await reply(
+            `✅ Nome do dono alterado com sucesso para:\n👑 ${novoNome}`
+          );
 
-  } catch (e) {
+        } catch (e) {
 
-    console.error(e);
+          console.error(e);
 
-    await reply(
-      "🐝 Ops! Ocorreu um erro inesperado. Tente novamente em alguns instantes, por favor! 🥺"
-    );
+          await reply(
+            "🐝 Ops! Ocorreu um erro inesperado. Tente novamente em alguns instantes, por favor! 🥺"
+          );
 
-  }
+        }
 
-break;
-        
-        
+        break;
+
+
       case 'lid':
       case 'meulid':
         if (isGroup) {
@@ -25521,7 +25113,7 @@ ${prefix}togglecmdvip premium_ia off`);
             ["AntiDelete", !!groupData.antidel],
             ["AntiSticker", !!(groupData.antifig && groupData.antifig.enabled)],
             ["AntiSticker Plus", !!(groupData.antistickerplus)],
-                      ];
+          ];
           const resFlags = [
             ["AutoDL", !!groupData.autodl],
             ["AutoSticker", !!groupData.autoSticker],
@@ -25768,148 +25360,148 @@ ${prefix}togglecmdvip premium_ia off`);
 
 
 
-case 'totext':
-case 'transcrever': {
-const quoted =
-        info.message?.extendedTextMessage
+      case 'totext':
+      case 'transcrever': {
+        const quoted =
+          info.message?.extendedTextMessage
             ?.contextInfo?.quotedMessage;
 
-    if (!quoted) {
-        return reply('❌ Marque um áudio.');
-    }
+        if (!quoted) {
+          return reply('❌ Marque um áudio.');
+        }
 
-const isAudio =
-        quoted.audioMessage ||
-        quoted.pttMessage ||
-        quoted.documentMessage?.mimetype?.startsWith('audio/') ||
-        (
+        const isAudio =
+          quoted.audioMessage ||
+          quoted.pttMessage ||
+          quoted.documentMessage?.mimetype?.startsWith('audio/') ||
+          (
             quoted.videoMessage?.ptv === false &&
             quoted.videoMessage?.mimetype?.startsWith('audio/')
-        );
+          );
 
-    if (!isAudio) {
-        return reply('❌ A mensagem marcada não é um áudio.');
-    }
-    const audio =
-        quoted.audioMessage ||
-        quoted.pttMessage ||
-        quoted.documentMessage ||
-        quoted.videoMessage;
-
-
-    const media =
-        await getFileBuffer(audio, "audio");
-
-
-    const linkz =
-        await upload(media);
-
-reply('*Já estou efetuando a transcrição!📃*')
-    const resultado =
-        await totext.totext(linkz);
-
-    if (!resultado?.ok) {
-        return reply(`❌ ${resultado?.msg || 'Erro ao transcrever áudio.'}`);
-    }
-
-
-    reply(`📝 Transcrição:\n\n${resultado.texto}`);
-
-}
-break;
-
-case 'removebg':
-case 'rmbg':
-case 'sbg':
-case 'sfundo':
-  try {
-
-    const imgMsg = quotedMessageContent?.imageMessage ||
-      quotedMessageContent?.viewOnceMessage?.message?.imageMessage ||
-      quotedMessageContent?.viewOnceMessageV2?.message?.imageMessage ||
-      info.message?.imageMessage ||
-      info.message?.viewOnceMessage?.message?.imageMessage ||
-      info.message?.viewOnceMessageV2?.message?.imageMessage;
-
-    if (!imgMsg) {
-      return reply(
-        `❌ Marque uma imagem para remover o fundo.\n\n💡 Uso: ${prefix}${command}`
-      );
-    }
-
-    reply('⏳ Removendo fundo, aguarde...');
-
-    const imageBuffer = await getFileBuffer(imgMsg, 'image');
-    const imageUrl = await upload(imageBuffer, true);
-
-    if (!imageUrl) {
-      throw new Error('Falha ao fazer upload da imagem.');
-    }
-
-    const bgResult = await removeBg(imageUrl);
-
-    if (!bgResult.ok) {
-      return reply(
-        bgResult.msg || '❌ Não foi possível remover o fundo da imagem.'
-      );
-    }
-
-    const resultUrl = bgResult.download;
-
-    if (!resultUrl) {
-      return reply('❌ A API não retornou nenhuma imagem.');
-    }
-
-    if (command === 'sbg' || command === 'sfundo') {
-
-      const response = await fetch(resultUrl);
-
-      if (!response.ok) {
-        throw new Error('Falha ao baixar imagem processada.');
-      }
-
-      const buffer = Buffer.from(
-        await response.arrayBuffer()
-      );
-
-      return sendSticker(
-        nazu,
-        from,
-        {
-          sticker: buffer,
-          author: `${pushname}\n${nomebot}\n${nomedono}`,
-          packname: 'Nazuna Bot - Stickers',
-          type: 'image'
-        },
-        {
-          quoted: info
+        if (!isAudio) {
+          return reply('❌ A mensagem marcada não é um áudio.');
         }
-      );
+        const audio =
+          quoted.audioMessage ||
+          quoted.pttMessage ||
+          quoted.documentMessage ||
+          quoted.videoMessage;
 
-    }
 
-    return nazu.sendMessage(
-      from,
-      {
-        image: {
-          url: resultUrl
+        const media =
+          await getFileBuffer(audio, "audio");
+
+
+        const linkz =
+          await upload(media);
+
+        reply('*Já estou efetuando a transcrição!📃*')
+        const resultado =
+          await totext.totext(linkz);
+
+        if (!resultado?.ok) {
+          return reply(`❌ ${resultado?.msg || 'Erro ao transcrever áudio.'}`);
         }
-      },
-      {
-        quoted: info
+
+
+        reply(`📝 Transcrição:\n\n${resultado.texto}`);
+
       }
-    );
+        break;
 
-  } catch (e) {
+      case 'removebg':
+      case 'rmbg':
+      case 'sbg':
+      case 'sfundo':
+        try {
 
-    console.error(e);
+          const imgMsg = quotedMessageContent?.imageMessage ||
+            quotedMessageContent?.viewOnceMessage?.message?.imageMessage ||
+            quotedMessageContent?.viewOnceMessageV2?.message?.imageMessage ||
+            info.message?.imageMessage ||
+            info.message?.viewOnceMessage?.message?.imageMessage ||
+            info.message?.viewOnceMessageV2?.message?.imageMessage;
 
-    return reply(
-      e.message || '❌ Ocorreu um erro interno. Tente novamente em alguns minutos.'
-    );
+          if (!imgMsg) {
+            return reply(
+              `❌ Marque uma imagem para remover o fundo.\n\n💡 Uso: ${prefix}${command}`
+            );
+          }
 
-  }
-break;
+          reply('⏳ Removendo fundo, aguarde...');
+
+          const imageBuffer = await getFileBuffer(imgMsg, 'image');
+          const imageUrl = await upload(imageBuffer, true);
+
+          if (!imageUrl) {
+            throw new Error('Falha ao fazer upload da imagem.');
+          }
+
+          const bgResult = await removeBg(imageUrl);
+
+          if (!bgResult.ok) {
+            return reply(
+              bgResult.msg || '❌ Não foi possível remover o fundo da imagem.'
+            );
+          }
+
+          const resultUrl = bgResult.download;
+
+          if (!resultUrl) {
+            return reply('❌ A API não retornou nenhuma imagem.');
+          }
+
+          if (command === 'sbg' || command === 'sfundo') {
+
+            const response = await fetch(resultUrl);
+
+            if (!response.ok) {
+              throw new Error('Falha ao baixar imagem processada.');
+            }
+
+            const buffer = Buffer.from(
+              await response.arrayBuffer()
+            );
+
+            return sendSticker(
+              nazu,
+              from,
+              {
+                sticker: buffer,
+                author: `${pushname}\n${nomebot}\n${nomedono}`,
+                packname: 'Nazuna Bot - Stickers',
+                type: 'image'
+              },
+              {
+                quoted: info
+              }
+            );
+
+          }
+
+          return nazu.sendMessage(
+            from,
+            {
+              image: {
+                url: resultUrl
+              }
+            },
+            {
+              quoted: info
+            }
+          );
+
+        } catch (e) {
+
+          console.error(e);
+
+          return reply(
+            e.message || '❌ Ocorreu um erro interno. Tente novamente em alguns minutos.'
+          );
+
+        }
+        break;
 
       case 'upscale':
         try {
@@ -25983,8 +25575,8 @@ break;
           });
           await sendSticker(nazu, from, {
             sticker: Buffer.from(res.data.result.image, 'base64'),
-author: `『${pushname}』`,
-packname: `${nomebot}`,            type: 'image'
+            author: `『${pushname}』`,
+            packname: `${nomebot}`, type: 'image'
           }, {
             quoted: info
           });
@@ -26006,8 +25598,8 @@ packname: `${nomebot}`,            type: 'image'
             sticker: {
               url: datzc
             },
-author: `『${pushname}』`,
-packname: `${nomebot}`,            type: 'image'
+            author: `『${pushname}』`,
+            packname: `${nomebot}`, type: 'image'
           }, {
             quoted: info
           });
@@ -26054,8 +25646,8 @@ packname: `${nomebot}`,            type: 'image'
             sticker: {
               url: `https://huratera.sirv.com/PicsArt_08-01-10.00.42.png?profile=Example-Text&text.0.text=${encodeURIComponent(processedText)}&text.0.outline.color=000000&text.0.outline.blur=0&text.0.outline.opacity=55&text.0.color=${cores}&text.0.font.family=${fontes}&text.0.font.weight=bold&text.0.background.color=ff0000`
             },
-author: `『${pushname}』`,
-packname: `${nomebot}`,            type: 'image'
+            author: `『${pushname}』`,
+            packname: `${nomebot}`, type: 'image'
           }, {
             quoted: info
           });
@@ -26150,8 +25742,8 @@ packname: `${nomebot}`,            type: 'image'
           // Enviar sticker
           await sendSticker(nazu, from, {
             sticker: fs.readFileSync(outputWebp),
-author: `『${pushname}』`,
-packname: `${nomebot}`,
+            author: `『${pushname}』`,
+            packname: `${nomebot}`,
             type: 'image'
           }, {
             quoted: info
@@ -26209,8 +25801,8 @@ packname: `${nomebot}`,
           var buffer = await getFileBuffer(isVideo2 ? boij : boij2, isVideo2 ? 'video' : 'image');
           await sendSticker(nazu, from, {
             sticker: buffer,
-author: `『${pushname}』`,
-packname: `${nomebot}`,            type: isVideo2 ? 'video' : 'image'
+            author: `『${pushname}』`,
+            packname: `${nomebot}`, type: isVideo2 ? 'video' : 'image'
           }, {
             quoted: info
           });
@@ -26496,69 +26088,69 @@ packname: `${nomebot}`,            type: isVideo2 ? 'video' : 'image'
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
-        
-        
-        case 'enquete':
-case 'poll':
-  try {
 
-    if (!isGroup) {
-      return reply("❌ Este comando só pode ser usado em grupos.");
-    }
 
-    if (!isGroupAdmin) {
-      return reply("Comando restrito a Administradores ou Moderadores com permissão. 💔");
-    }
+      case 'enquete':
+      case 'poll':
+        try {
 
-    if (!q) {
-      return reply(
-        `❌ Use corretamente:\n\n` +
-        `💡 Exemplo:\n` +
-        `${prefix + command} Pergunta | Opção 1 | Opção 2\n\n` +
-        `📌 Você pode adicionar várias opções separando com |`
-      );
-    }
+          if (!isGroup) {
+            return reply("❌ Este comando só pode ser usado em grupos.");
+          }
 
-    const partes = q
-      .split('|')
-      .map(v => v.trim())
-      .filter(Boolean);
+          if (!isGroupAdmin) {
+            return reply("Comando restrito a Administradores ou Moderadores com permissão. 💔");
+          }
 
-    if (partes.length < 3) {
-      return reply(
-        `❌ Você precisa informar:\n` +
-        `• Pergunta\n` +
-        `• Pelo menos 2 opções`
-      );
-    }
+          if (!q) {
+            return reply(
+              `❌ Use corretamente:\n\n` +
+              `💡 Exemplo:\n` +
+              `${prefix + command} Pergunta | Opção 1 | Opção 2\n\n` +
+              `📌 Você pode adicionar várias opções separando com |`
+            );
+          }
 
-    const pergunta = partes[0];
-    const opcoes = partes.slice(1);
+          const partes = q
+            .split('|')
+            .map(v => v.trim())
+            .filter(Boolean);
 
-    await nazu.sendMessage(
-      from,
-      {
-        poll: {
-          name: pergunta,
-          values: opcoes,
-          selectableCount: 1
+          if (partes.length < 3) {
+            return reply(
+              `❌ Você precisa informar:\n` +
+              `• Pergunta\n` +
+              `• Pelo menos 2 opções`
+            );
+          }
+
+          const pergunta = partes[0];
+          const opcoes = partes.slice(1);
+
+          await nazu.sendMessage(
+            from,
+            {
+              poll: {
+                name: pergunta,
+                values: opcoes,
+                selectableCount: 1
+              }
+            },
+            {
+              quoted: info
+            }
+          );
+
+        } catch (e) {
+
+          console.error('Erro no comando enquete:', e);
+
+          return reply(
+            '❌ Ocorreu um erro ao criar a enquete.'
+          );
+
         }
-      },
-      {
-        quoted: info
-      }
-    );
-
-  } catch (e) {
-
-    console.error('Erro no comando enquete:', e);
-
-    return reply(
-      '❌ Ocorreu um erro ao criar a enquete.'
-    );
-
-  }
-break;
+        break;
       case 'listblocksgp':
       case 'blocklist':
         if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
@@ -27769,75 +27361,75 @@ A mensagem será enviada todos os dias às ${normalizedTime} (horário de São P
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
-        
-        case 'roletaban':
-  try {
 
-    if (!isGroup) {
-      return reply("❌ Este comando só pode ser usado em grupos.");
-    }
+      case 'roletaban':
+        try {
 
-    if (!isGroupAdmin) {
-      return reply("Comando restrito a Administradores ou Moderadores com permissão. 💔");
-    }
+          if (!isGroup) {
+            return reply("❌ Este comando só pode ser usado em grupos.");
+          }
 
-    if (!isBotAdmin) {
-      return reply("Eu preciso ser adm 💔");
-    }
+          if (!isGroupAdmin) {
+            return reply("Comando restrito a Administradores ou Moderadores com permissão. 💔");
+          }
 
-    let path = pathz.join(GRUPOS_DIR, `${from}.json`);
+          if (!isBotAdmin) {
+            return reply("Eu preciso ser adm 💔");
+          }
 
-    let data = await optimizer.loadJsonWithCache(
-      path,
-      { mark: {} }
-    );
+          let path = pathz.join(GRUPOS_DIR, `${from}.json`);
 
-    let membros = AllgroupMembers.filter(
-      m =>
-        !['0', 'marca'].includes(data.mark[m]) &&
-        m !== botNumber &&
-        !groupAdmins.includes(m)
-    );
+          let data = await optimizer.loadJsonWithCache(
+            path,
+            { mark: {} }
+          );
 
-    if (membros.length < 1) {
-      return reply(
-        '❌ Não há membros válidos para remover.'
-      );
-    }
+          let membros = AllgroupMembers.filter(
+            m =>
+              !['0', 'marca'].includes(data.mark[m]) &&
+              m !== botNumber &&
+              !groupAdmins.includes(m)
+          );
 
-    const indice = Math.floor(
-      Math.random() * membros.length
-    );
+          if (membros.length < 1) {
+            return reply(
+              '❌ Não há membros válidos para remover.'
+            );
+          }
 
-    const sorteado = membros[indice];
+          const indice = Math.floor(
+            Math.random() * membros.length
+          );
 
-    await reply(
-      `🎲 @${getUserName(sorteado)} você foi selecionado aleatoriamente para ser removido do grupo.`,
-      {
-        mentions: [sorteado]
-      }
-    );
+          const sorteado = membros[indice];
 
-    await new Promise(resolve => setTimeout(resolve, 3000));
+          await reply(
+            `🎲 @${getUserName(sorteado)} você foi selecionado aleatoriamente para ser removido do grupo.`,
+            {
+              mentions: [sorteado]
+            }
+          );
 
-    await nazu.groupParticipantsUpdate(
-      from,
-      [sorteado],
-      'remove'
-    );
+          await new Promise(resolve => setTimeout(resolve, 3000));
 
-  } catch (e) {
+          await nazu.groupParticipantsUpdate(
+            from,
+            [sorteado],
+            'remove'
+          );
 
-    console.error('Erro no comando roletaban:', e);
+        } catch (e) {
 
-    await reply(
-      "❌ Ocorreu um erro interno. Tente novamente em alguns minutos."
-    );
+          console.error('Erro no comando roletaban:', e);
 
-  }
+          await reply(
+            "❌ Ocorreu um erro interno. Tente novamente em alguns minutos."
+          );
 
-break;
-        
+        }
+
+        break;
+
       case 'totag':
       case 'cita':
       case 'hidetag':
@@ -28636,10 +28228,10 @@ Exemplos:
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
-        
-        
-case 'bemvindo2':        
-       case 'welcome2':
+
+
+      case 'bemvindo2':
+      case 'welcome2':
         try {
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
           if (!isGroupAdmin) return reply("você precisa ser adm 💔");
@@ -28662,7 +28254,7 @@ case 'bemvindo2':
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
-        
+
       case 'banghost':  //corrigido por kauan revil
         try {
           if (!isGroup) return reply("❌ Só pode ser usado em grupos.");
@@ -28831,7 +28423,7 @@ case 'bemvindo2':
 
 
 
-case 'set-bannerbv':
+      case 'set-bannerbv':
       case 'set-bannnerbv': {
         if (!isGroup) return reply("isso só pode ser usado em grupo 💔");
         if (!isGroupAdmin) return reply("você precisa ser adm 💔");
@@ -29628,10 +29220,94 @@ case 'set-bannerbv':
           reply("ocorreu um erro 💔");
         }
         break;
-        
-        
-        
-  case 'modoadv':
+
+      case 'anticategoria':
+      case 'setcategoria':
+        try {
+          if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
+          if (!isGroupAdmin) return reply("você precisa ser adm 💔");
+          if (!isBotAdmin) return reply("Eu preciso ser adm 💔");
+
+          if (!q) {
+            return reply(`💡 *Como usar:* ${prefix}${command} [nome da categoria]\n\n` +
+              `📂 *Categorias disponíveis:*\n` +
+              `• *links* (Anti-Links)\n` +
+              `• *midia* (Anti-Mídias/Arquivos)\n` +
+              `• *seguranca* (Anti-Trava/Botão/Status)\n` +
+              `• *todos* (Ativar TUDO)`);
+          }
+
+          const cat = q.trim().toLowerCase();
+          const groupFilePath = __dirname + `/../database/grupos/${from}.json`;
+          let groupData = fs.existsSync(groupFilePath) ? JSON.parse(fs.readFileSync(groupFilePath)) : {};
+
+          let activated = [];
+
+          if (cat === '1' || cat === 'links' || cat === 'divulgacao') {
+            groupData.antilinkgp = true;
+            groupData.antilinkcanal = true;
+            groupData.antilinkhard = true;
+            groupData.antilinksoft = false;
+            activated = ['Anti-Link Grupo 🔗', 'Anti-Link Canal 📢', 'Anti-Link Hard ⚠️'];
+          } 
+          else if (cat === '2' || cat === 'midia' || cat === 'conteudo') {
+            groupData.antiporn = true;
+            groupData.antifig = groupData.antifig || {};
+            groupData.antifig.enabled = true;
+            groupData.antistickerplus = true;
+            groupData.antistickerplus_remover = true;
+            groupData.antistickerplus_apagar = true;
+            groupData.antidoc = true;
+            groupData.antiloc = true;
+            activated = ['Anti-Pornografia 🔞', 'Anti-Figurinhas 🖼️', 'Anti-Sticker Plus 👾', 'Anti-Documentos 📄', 'Anti-Localização 🗺️'];
+          } 
+          else if (cat === '3' || cat === 'seguranca' || cat === 'antitrava') {
+            groupData.antibtn = true;
+            groupData.antistatus = true;
+            groupData.antistickerplus = true;
+            groupData.antistickerplus_remover = true;
+            groupData.antistickerplus_apagar = true;
+            activated = ['Anti-Botões 🚫', 'Anti-Status 📲', 'Anti-Sticker Plus 👾'];
+          }
+          else if (cat === '4' || cat === 'todos' || cat === 'tudo') {
+            groupData.antilinkgp = true;
+            groupData.antilinkcanal = true;
+            groupData.antilinkhard = true;
+            groupData.antilinksoft = false;
+            groupData.antiporn = true;
+            groupData.antifig = groupData.antifig || {};
+            groupData.antifig.enabled = true;
+            groupData.antistickerplus = true;
+            groupData.antistickerplus_remover = true;
+            groupData.antistickerplus_apagar = true;
+            groupData.antidoc = true;
+            groupData.antiloc = true;
+            groupData.antibtn = true;
+            groupData.antistatus = true;
+            activated = [
+              'Anti-Link Grupo 🔗', 'Anti-Link Canal 📢', 'Anti-Link Hard ⚠️',
+              'Anti-Pornografia 🔞', 'Anti-Figurinhas 🖼️', 'Anti-Sticker Plus 👾',
+              'Anti-Documentos 📄', 'Anti-Localização 🗺️', 'Anti-Botões 🚫', 'Anti-Status 📲'
+            ];
+          } else {
+            return reply(`❌ Categoria inválida! Escolha uma das opções:\n• *links*\n• *midia*\n• *seguranca*\n• *todos*`);
+          }
+
+          fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
+
+          await reply(`✅ *Categoria ativada com sucesso!*\n\n` +
+            `📂 *Recursos ativados:*\n` +
+            activated.map(a => `• ${a}`).join('\n') + 
+            `\n\n🛡️ O grupo agora está protegido.`);
+        } catch (e) {
+          console.error(e);
+          await reply("Ocorreu um erro ao ativar a categoria 💔");
+        }
+        break;
+
+
+
+      case 'modoadv':
         try {
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
           if (!isGroupAdmin) return reply("você precisa ser adm 💔");
@@ -29643,80 +29319,80 @@ case 'set-bannerbv':
 
           groupData.modoADV = !groupData.modoADV;
           fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
-const message = groupData.modoADV 
-? `⚠️ *Modo advertência foi ativado com sucesso!*\n\nAgora, quando alguém enviar links de outros grupos ou infringir qualquer regra ativa, receberá uma advertência automaticamente.\n\n📌 Ao atingir *3/3 advertências*, o usuário será removido do grupo automaticamente.\n\nMantenha o grupo organizado 🛡️`
-: `✅ *Modo advertência foi desativado.*\n\nAs infrações não irão mais gerar advertências automáticas.`;
+          const message = groupData.modoADV
+            ? `⚠️ *Modo advertência foi ativado com sucesso!*\n\nAgora, quando alguém enviar links de outros grupos ou infringir qualquer regra ativa, receberá uma advertência automaticamente.\n\n📌 Ao atingir *3/3 advertências*, o usuário será removido do grupo automaticamente.\n\nMantenha o grupo organizado 🛡️`
+            : `✅ *Modo advertência foi desativado.*\n\nAs infrações não irão mais gerar advertências automáticas.`;
           reply(`${message}`);
         } catch (e) {
           console.error(e);
           reply("ocorreu um erro 💔");
         }
         break;
-        
 
-case 'antistickerplus':
-  try {
-    if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
-    if (!isGroupAdmin) return reply("você precisa ser adm 💔");
-    if (!isBotAdmin) return reply("Eu preciso ser adm 💔");
 
-    const groupFilePath = __dirname + `/../database/grupos/${from}.json`;
+      case 'antistickerplus':
+        try {
+          if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
+          if (!isGroupAdmin) return reply("você precisa ser adm 💔");
+          if (!isBotAdmin) return reply("Eu preciso ser adm 💔");
 
-    let groupData = fs.existsSync(groupFilePath)
-      ? JSON.parse(fs.readFileSync(groupFilePath))
-      : {
-          antistickerplus: false,
-          antistickerplus_remover: false,
-          antistickerplus_apagar: true
-        };
+          const groupFilePath = __dirname + `/../database/grupos/${from}.json`;
 
-    const option = (args[0] || "").toLowerCase();
+          let groupData = fs.existsSync(groupFilePath)
+            ? JSON.parse(fs.readFileSync(groupFilePath))
+            : {
+              antistickerplus: false,
+              antistickerplus_remover: false,
+              antistickerplus_apagar: true
+            };
 
-    if (option === "remover") {
-      groupData.antistickerplus_remover = !groupData.antistickerplus_remover;
+          const option = (args[0] || "").toLowerCase();
 
-      if (groupData.antistickerplus_remover) {
-        groupData.antistickerplus_apagar = false;
-      }
+          if (option === "remover") {
+            groupData.antistickerplus_remover = !groupData.antistickerplus_remover;
 
-      fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
+            if (groupData.antistickerplus_remover) {
+              groupData.antistickerplus_apagar = false;
+            }
 
-      return reply(
-        groupData.antistickerplus_remover
-          ? "✅ Remoção ativada. Usuários que enviarem esse tipo de figurinha serão removidos."
-          : "❌ Remoção desativada."
-      );
-    }
+            fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
 
-    if (option === "apagar") {
-      groupData.antistickerplus_apagar = !groupData.antistickerplus_apagar;
+            return reply(
+              groupData.antistickerplus_remover
+                ? "✅ Remoção ativada. Usuários que enviarem esse tipo de figurinha serão removidos."
+                : "❌ Remoção desativada."
+            );
+          }
 
-      if (groupData.antistickerplus_apagar) {
-        groupData.antistickerplus_remover = false;
-      }
+          if (option === "apagar") {
+            groupData.antistickerplus_apagar = !groupData.antistickerplus_apagar;
 
-      fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
+            if (groupData.antistickerplus_apagar) {
+              groupData.antistickerplus_remover = false;
+            }
 
-      return reply(
-        groupData.antistickerplus_apagar
-          ? "✅ Apagar mensagem ativado. Mensagens serão apagadas."
-          : "❌ Apagar mensagem desativado."
-      );
-    }
+            fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
 
-    groupData.antistickerplus = !groupData.antistickerplus;
+            return reply(
+              groupData.antistickerplus_apagar
+                ? "✅ Apagar mensagem ativado. Mensagens serão apagadas."
+                : "❌ Apagar mensagem desativado."
+            );
+          }
 
-    if (!groupData.antistickerplus_remover && !groupData.antistickerplus_apagar) {
-      groupData.antistickerplus_apagar = true;
-    }
+          groupData.antistickerplus = !groupData.antistickerplus;
 
-    fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
+          if (!groupData.antistickerplus_remover && !groupData.antistickerplus_apagar) {
+            groupData.antistickerplus_apagar = true;
+          }
 
-    const message = groupData.antistickerplus
-      ? `✅ antistickerplus ativado.\n\nO sistema de bloqueio de figurinhas especiais está ativo.`
-      : `❌ antistickerplus desativado.\n\nNenhuma figurinha será bloqueada.`;
+          fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
 
-    const tutorial = `
+          const message = groupData.antistickerplus
+            ? `✅ antistickerplus ativado.\n\nO sistema de bloqueio de figurinhas especiais está ativo.`
+            : `❌ antistickerplus desativado.\n\nNenhuma figurinha será bloqueada.`;
+
+          const tutorial = `
 📘 Como usar:
 
 ${prefix}antistickerplus → liga/desliga
@@ -29726,14 +29402,14 @@ ${prefix}antistickerplus remover → remove usuário e apaga mensagem
 ⚠️ Apenas um modo pode ficar ativo por vez.
 `;
 
-    reply(`${message}\n${tutorial}`);
+          reply(`${message}\n${tutorial}`);
 
-  } catch (e) {
-    console.error(e);
-    reply("ocorreu um erro 💔");
-  }
-  break;
-        
+        } catch (e) {
+          console.error(e);
+          reply("ocorreu um erro 💔");
+        }
+        break;
+
       case 'antilinkcanal':
       case 'antilinkch':
         try {
@@ -29806,10 +29482,10 @@ ${prefix}antistickerplus remover → remove usuário e apaga mensagem
           reply("Ocorreu um erro 💔");
         }
         break;
-   
-        
-             case 'autototext':     
-              case 'autotranscrever':
+
+
+      case 'autototext':
+      case 'autotranscrever':
         try {
           if (!isGroup) return reply("Isso só pode ser usado em grupo 💔");
           if (!isGroupAdmin) return reply("Você precisa ser administrador 💔");
@@ -29824,7 +29500,7 @@ ${prefix}antistickerplus remover → remove usuário e apaga mensagem
           reply("Ocorreu um erro 💔");
         }
         break;
-        
+
       case 'autorepo':
       case 'autoresposta':
         try {
@@ -29842,133 +29518,132 @@ ${prefix}antistickerplus remover → remove usuário e apaga mensagem
         }
         break;
 
-case 'assistente':
-case 'assistent':
-  try {
+      case 'assistente':
+      case 'assistent':
+        try {
 
-    if (!isGroup) return reply("Isso só pode ser usado em grupo 💔");
-    if (!isGroupAdmin) return reply("Você precisa ser administrador 💔");
+          if (!isGroup) return reply("Isso só pode ser usado em grupo 💔");
+          if (!isGroupAdmin) return reply("Você precisa ser administrador 💔");
 
-    const groupFilePath = __dirname + `/../database/grupos/${from}.json`;
-    let groupData = fs.existsSync(groupFilePath) ? JSON.parse(fs.readFileSync(groupFilePath)) : {};
+          const groupFilePath = __dirname + `/../database/grupos/${from}.json`;
+          let groupData = fs.existsSync(groupFilePath) ? JSON.parse(fs.readFileSync(groupFilePath)) : {};
 
-    if (!q) {
-      groupData.assistente = !groupData.assistente;
+          if (!q) {
+            groupData.assistente = !groupData.assistente;
 
-      if (!groupData.assistente) {
-        delete groupData.assistentePersonality;
-      } else {
-        groupData.assistentePersonality = groupData.assistentePersonality || 'nazuna';
-      }
+            if (!groupData.assistente) {
+              delete groupData.assistentePersonality;
+            } else {
+              groupData.assistentePersonality = groupData.assistentePersonality || 'nazuna';
+            }
 
-      fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
+            fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
 
-      const statusMsg = groupData.assistente
-        ? `✅ *Assistente ativada com sucesso!*\n\n` +
-        `🤖 *Personalidade atual:* ${
-          groupData.assistentePersonality === 'nazuna' ? 'Nazuna (Padrão)' :
-          groupData.assistentePersonality === 'humana' ? 'Humana' :
-          groupData.assistentePersonality === 'pro' ? 'Pro (Comandos)' :
-          'IA Normal'
-        }\n\n` +
-        `💡 *Trocar personalidade:*\n` +
-        `• ${prefix}assistente nazuna\n` +
-        `• ${prefix}assistente humana\n` +
-        `• ${prefix}assistente ia\n` +
-        `• ${prefix}assistente pro\n\n` +
-        `🧠 A IA aprende com base nos padrões de conversa.`
-        : `❌ *Assistente desativada!*`;
+            const statusMsg = groupData.assistente
+              ? `✅ *Assistente ativada com sucesso!*\n\n` +
+              `🤖 *Personalidade atual:* ${groupData.assistentePersonality === 'nazuna' ? 'Nazuna (Padrão)' :
+                groupData.assistentePersonality === 'humana' ? 'Humana' :
+                  groupData.assistentePersonality === 'pro' ? 'Pro (Comandos)' :
+                    'IA Normal'
+              }\n\n` +
+              `💡 *Trocar personalidade:*\n` +
+              `• ${prefix}assistente nazuna\n` +
+              `• ${prefix}assistente humana\n` +
+              `• ${prefix}assistente ia\n` +
+              `• ${prefix}assistente pro\n\n` +
+              `🧠 A IA aprende com base nos padrões de conversa.`
+              : `❌ *Assistente desativada!*`;
 
-      return reply(statusMsg);
-    }
+            return reply(statusMsg);
+          }
 
-    const personality = q.toLowerCase().trim().replace(/\s+/g, '_');
+          const personality = q.toLowerCase().trim().replace(/\s+/g, '_');
 
-    const builtinPersonalities = ['nazuna', 'humana', 'ia', 'pro'];
-    let isValidPersonality = builtinPersonalities.includes(personality);
+          const builtinPersonalities = ['nazuna', 'humana', 'ia', 'pro'];
+          let isValidPersonality = builtinPersonalities.includes(personality);
 
-    // Verificar personalidades customizadas do dono
-    if (!isValidPersonality) {
-      try {
-        const persFile = pathz.join(DATABASE_DIR, 'customPersonalidades.json');
-        if (fs.existsSync(persFile)) {
-          const persData = JSON.parse(fs.readFileSync(persFile, 'utf-8'));
-          if (persData[personality]) isValidPersonality = true;
+          // Verificar personalidades customizadas do dono
+          if (!isValidPersonality) {
+            try {
+              const persFile = pathz.join(DATABASE_DIR, 'customPersonalidades.json');
+              if (fs.existsSync(persFile)) {
+                const persData = JSON.parse(fs.readFileSync(persFile, 'utf-8'));
+                if (persData[personality]) isValidPersonality = true;
+              }
+            } catch (_) { }
+          }
+
+          if (!isValidPersonality) {
+            return reply(`❌ *Personalidade inválida!*\n\n` +
+              `Escolha uma das opções padrão:\n` +
+              `• ${prefix}assistente nazuna\n` +
+              `• ${prefix}assistente humana\n` +
+              `• ${prefix}assistente ia\n` +
+              `• ${prefix}assistente pro\n\n` +
+              `Ou use um ID de personalidade customizada criada pelo dono do bot.`);
+          }
+
+          groupData.assistente = true;
+          groupData.assistentePersonality = personality;
+          fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
+
+          const builtinNames = {
+            'nazuna': '🌙 *Nazuna* - Vampira tsundere',
+            'humana': '👤 *Humana* - Age como pessoa real',
+            'ia': '🤖 *IA Normal* - Direta e objetiva',
+            'pro': '⚡ *Pro* - Executa comandos'
+          };
+
+          let personalityDisplayName = builtinNames[personality];
+          if (!personalityDisplayName) {
+            try {
+              const persFile = pathz.join(DATABASE_DIR, 'customPersonalidades.json');
+              const persData = JSON.parse(fs.readFileSync(persFile, 'utf-8'));
+              personalityDisplayName = `🎭 *${persData[personality]?.nome || personality}* - Personalidade customizada`;
+            } catch (_) {
+              personalityDisplayName = `🎭 *${personality}* - Personalidade customizada`;
+            }
+          }
+
+          reply(`✅ *Personalidade alterada!*\n\n` +
+            `${personalityDisplayName}\n\n` +
+            `💬 A assistente agora responderá com essa personalidade.\n` +
+            `🧠 Memória separada por personalidade.`);
+
+        } catch (e) {
+          console.error(e);
+          reply("Ocorreu um erro 💔");
         }
-      } catch (_) {}
-    }
+        break;
 
-    if (!isValidPersonality) {
-      return reply(`❌ *Personalidade inválida!*\n\n` +
-        `Escolha uma das opções padrão:\n` +
-        `• ${prefix}assistente nazuna\n` +
-        `• ${prefix}assistente humana\n` +
-        `• ${prefix}assistente ia\n` +
-        `• ${prefix}assistente pro\n\n` +
-        `Ou use um ID de personalidade customizada criada pelo dono do bot.`);
-    }
+      case 'setpersonalidade':
+      case 'criarpers':
+      case 'novapers':
+        try {
+          if (!isOwner) return reply("❌ Apenas o dono do bot pode usar esse comando.");
 
-    groupData.assistente = true;
-    groupData.assistentePersonality = personality;
-    fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
+          const persFile = pathz.join(DATABASE_DIR, 'customPersonalidades.json');
+          let persData = fs.existsSync(persFile)
+            ? JSON.parse(fs.readFileSync(persFile, 'utf-8'))
+            : {};
 
-    const builtinNames = {
-      'nazuna': '🌙 *Nazuna* - Vampira tsundere',
-      'humana': '👤 *Humana* - Age como pessoa real',
-      'ia': '🤖 *IA Normal* - Direta e objetiva',
-      'pro': '⚡ *Pro* - Executa comandos'
-    };
+          const montarLista = () => {
+            const ids = Object.keys(persData);
 
-    let personalityDisplayName = builtinNames[personality];
-    if (!personalityDisplayName) {
-      try {
-        const persFile = pathz.join(DATABASE_DIR, 'customPersonalidades.json');
-        const persData = JSON.parse(fs.readFileSync(persFile, 'utf-8'));
-        personalityDisplayName = `🎭 *${persData[personality]?.nome || personality}* - Personalidade customizada`;
-      } catch (_) {
-        personalityDisplayName = `🎭 *${personality}* - Personalidade customizada`;
-      }
-    }
+            let texto = `🎭 *PERSONALIDADES CUSTOMIZADAS*`;
 
-    reply(`✅ *Personalidade alterada!*\n\n` +
-      `${personalityDisplayName}\n\n` +
-      `💬 A assistente agora responderá com essa personalidade.\n` +
-      `🧠 Memória separada por personalidade.`);
+            if (ids.length > 0) {
+              texto += ` (${ids.length})\n\n`;
 
-  } catch (e) {
-    console.error(e);
-    reply("Ocorreu um erro 💔");
-  }
-  break;
+              ids.forEach((id, i) => {
+                texto += `*${i + 1}.* \`${id}\` — ${persData[id].nome || id}\n`;
+              });
+            } else {
+              texto += `\n\nNenhuma personalidade criada ainda.\n`;
+            }
 
-case 'setpersonalidade':
-case 'criarpers':
-case 'novapers':
-try {
-if (!isOwner) return reply("❌ Apenas o dono do bot pode usar esse comando.");
-
-const persFile = pathz.join(DATABASE_DIR, 'customPersonalidades.json');
-let persData = fs.existsSync(persFile)
-  ? JSON.parse(fs.readFileSync(persFile, 'utf-8'))
-  : {};
-
-const montarLista = () => {
-  const ids = Object.keys(persData);
-
-  let texto = `🎭 *PERSONALIDADES CUSTOMIZADAS*`;
-
-  if (ids.length > 0) {
-    texto += ` (${ids.length})\n\n`;
-
-    ids.forEach((id, i) => {
-      texto += `*${i + 1}.* \`${id}\` — ${persData[id].nome || id}\n`;
-    });
-  } else {
-    texto += `\n\nNenhuma personalidade criada ainda.\n`;
-  }
-
-  texto +=
-`\n💡 *Como ativar em grupo:*  
+            texto +=
+              `\n💡 *Como ativar em grupo:*  
 • ${prefix}assistente <id>
 
 📝 *Criar / editar:*  
@@ -29982,132 +29657,130 @@ const montarLista = () => {
 *Exemplo:*  
 ${prefix}setpersonalidade kuudere | Você é uma garota fria e inteligente chamada Hana. Usa emojis ❄️🧊`;
 
-  return texto;
-};
+            return texto;
+          };
 
-if (!q) {
-  return reply(montarLista());
-}
+          if (!q) {
+            return reply(montarLista());
+          }
 
-const args = q.trim();
+          const args = q.trim();
 
-if (args.startsWith('del ')) {
-  const delId = args.slice(4).trim().toLowerCase().replace(/\s+/g, '_');
+          if (args.startsWith('del ')) {
+            const delId = args.slice(4).trim().toLowerCase().replace(/\s+/g, '_');
 
-  if (!persData[delId]) {
-    return reply(`❌ Personalidade *${delId}* não encontrada.`);
-  }
+            if (!persData[delId]) {
+              return reply(`❌ Personalidade *${delId}* não encontrada.`);
+            }
 
-  delete persData[delId];
+            delete persData[delId];
 
-  fs.writeFileSync(
-    persFile,
-    JSON.stringify(persData, null, 2)
-  );
+            fs.writeFileSync(
+              persFile,
+              JSON.stringify(persData, null, 2)
+            );
 
-  return reply(`🗑️ Personalidade *${delId}* deletada com sucesso!`);
-}
+            return reply(`🗑️ Personalidade *${delId}* deletada com sucesso!`);
+          }
 
-if (args.startsWith('ver ')) {
-  const verId = args.slice(4).trim().toLowerCase().replace(/\s+/g, '_');
+          if (args.startsWith('ver ')) {
+            const verId = args.slice(4).trim().toLowerCase().replace(/\s+/g, '_');
 
-  if (!persData[verId]) {
-    return reply(`❌ Personalidade *${verId}* não encontrada.`);
-  }
+            if (!persData[verId]) {
+              return reply(`❌ Personalidade *${verId}* não encontrada.`);
+            }
 
-  return reply(
-    `🎭 *${persData[verId].nome || verId}*\n\n` +
-    `🆔 ID: \`${verId}\`\n\n` +
-    `📝 *Prompt:*\n${persData[verId].prompt}`
-  );
-}
+            return reply(
+              `🎭 *${persData[verId].nome || verId}*\n\n` +
+              `🆔 ID: \`${verId}\`\n\n` +
+              `📝 *Prompt:*\n${persData[verId].prompt}`
+            );
+          }
 
-if (args === 'list' || args === 'lista') {
-  return reply(montarLista());
-}
+          if (args === 'list' || args === 'lista') {
+            return reply(montarLista());
+          }
 
-if (!args.includes('|')) {
-  return reply(
-    `❌ *Formato inválido!*\n\n` +
-    `📝 *Uso correto:*\n` +
-    `${prefix}setpersonalidade <id> | <descrição>\n\n` +
-    `💡 Para listar:\n` +
-    `${prefix}setpersonalidade list`
-  );
-}
+          if (!args.includes('|')) {
+            return reply(
+              `❌ *Formato inválido!*\n\n` +
+              `📝 *Uso correto:*\n` +
+              `${prefix}setpersonalidade <id> | <descrição>\n\n` +
+              `💡 Para listar:\n` +
+              `${prefix}setpersonalidade list`
+            );
+          }
 
-const separatorIdx = args.indexOf('|');
+          const separatorIdx = args.indexOf('|');
 
-const rawId = args
-  .slice(0, separatorIdx)
-  .trim()
-  .toLowerCase()
-  .replace(/\s+/g, '_');
+          const rawId = args
+            .slice(0, separatorIdx)
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '_');
 
-const prompt = args
-  .slice(separatorIdx + 1)
-  .trim();
+          const prompt = args
+            .slice(separatorIdx + 1)
+            .trim();
 
-if (!rawId || rawId.length < 2) {
-  return reply(`❌ O ID deve ter pelo menos 2 caracteres.`);
-}
+          if (!rawId || rawId.length < 2) {
+            return reply(`❌ O ID deve ter pelo menos 2 caracteres.`);
+          }
 
-if (rawId.length > 30) {
-  return reply(`❌ O ID deve ter no máximo 30 caracteres.`);
-}
+          if (rawId.length > 30) {
+            return reply(`❌ O ID deve ter no máximo 30 caracteres.`);
+          }
 
-if (['nazuna', 'humana', 'ia', 'pro'].includes(rawId)) {
-  return reply(`❌ Esse ID é reservado pelo sistema.`);
-}
+          if (['nazuna', 'humana', 'ia', 'pro'].includes(rawId)) {
+            return reply(`❌ Esse ID é reservado pelo sistema.`);
+          }
 
-if (prompt.length < 10) {
-  return reply(`❌ O prompt é muito curto.`);
-}
+          if (prompt.length < 10) {
+            return reply(`❌ O prompt é muito curto.`);
+          }
 
-if (prompt.length > 2000) {
-  return reply(`❌ O prompt é muito longo. Máximo de 2000 caracteres.`);
-}
+          if (prompt.length > 2000) {
+            return reply(`❌ O prompt é muito longo. Máximo de 2000 caracteres.`);
+          }
 
-const isEdit = !!persData[rawId];
+          const isEdit = !!persData[rawId];
 
-persData[rawId] = {
-  nome: rawId
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, l => l.toUpperCase()),
-  prompt,
-  criadoEm:
-    persData[rawId]?.criadoEm ||
-    new Date().toISOString(),
-  editadoEm:
-    new Date().toISOString()
-};
+          persData[rawId] = {
+            nome: rawId
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, l => l.toUpperCase()),
+            prompt,
+            criadoEm:
+              persData[rawId]?.criadoEm ||
+              new Date().toISOString(),
+            editadoEm:
+              new Date().toISOString()
+          };
 
-fs.writeFileSync(
-  persFile,
-  JSON.stringify(persData, null, 2)
-);
+          fs.writeFileSync(
+            persFile,
+            JSON.stringify(persData, null, 2)
+          );
 
-reply(
-  `✅ *Personalidade ${
-    isEdit ? 'editada' : 'criada'
-  } com sucesso!*\n\n` +
-  `🎭 *Nome:* ${persData[rawId].nome}\n` +
-  `🆔 *ID:* \`${rawId}\`\n\n` +
-  `💡 *Como ativar:*\n` +
-  `${prefix}assistente ${rawId}\n\n` +
-  `📝 *Prompt salvo:*\n` +
-  `${
-    prompt.length > 200
-      ? prompt.slice(0, 200) + '...'
-      : prompt
-  }`
-);
+          reply(
+            `✅ *Personalidade ${isEdit ? 'editada' : 'criada'
+            } com sucesso!*\n\n` +
+            `🎭 *Nome:* ${persData[rawId].nome}\n` +
+            `🆔 *ID:* \`${rawId}\`\n\n` +
+            `💡 *Como ativar:*\n` +
+            `${prefix}assistente ${rawId}\n\n` +
+            `📝 *Prompt salvo:*\n` +
+            `${prompt.length > 200
+              ? prompt.slice(0, 200) + '...'
+              : prompt
+            }`
+          );
 
-} catch (e) {
-console.error(e);
-reply("Ocorreu um erro ao gerenciar personalidades 💔");
-}
-break;
+        } catch (e) {
+          console.error(e);
+          reply("Ocorreu um erro ao gerenciar personalidades 💔");
+        }
+        break;
       case 'antigore':
         try {
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
@@ -30144,10 +29817,10 @@ break;
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
-        
-        
-        
-       case 'legendabv2':
+
+
+
+      case 'legendabv2':
       case 'textbv2':
       case 'welcomemsg2':
         try {
@@ -30164,7 +29837,7 @@ break;
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
-        
+
       case 'mute':
       case 'mutar':
         try {
@@ -32078,97 +31751,97 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
         break;
 
 
-case 'eununca':
-  try {
+      case 'eununca':
+        try {
 
-    if (!isGroup) {
-      return reply("isso so pode ser usado em grupo 💔");
-    }
+          if (!isGroup) {
+            return reply("isso so pode ser usado em grupo 💔");
+          }
 
-    if (!isModoBn) {
-      return reply('❌ O modo brincadeira não esta ativo nesse grupo');
-    }
+          if (!isModoBn) {
+            return reply('❌ O modo brincadeira não esta ativo nesse grupo');
+          }
 
-    const pergunta =
-      toolsJson().iNever[
-        Math.floor(
-          Math.random() * toolsJson().iNever.length
-        )
-      ];
+          const pergunta =
+            toolsJson().iNever[
+            Math.floor(
+              Math.random() * toolsJson().iNever.length
+            )
+            ];
 
-    await nazu.sendMessage(
-      from,
-      {
-        poll: {
-          name: `🔞 EU NUNCA\n\n${pergunta}`,
-          values: [
-            'Eu nunca',
-            'Eu já'
-          ],
-          selectableCount: 1
+          await nazu.sendMessage(
+            from,
+            {
+              poll: {
+                name: `🔞 EU NUNCA\n\n${pergunta}`,
+                values: [
+                  'Eu nunca',
+                  'Eu já'
+                ],
+                selectableCount: 1
+              }
+            },
+            {
+              quoted: info
+            }
+          );
+
+        } catch (e) {
+
+          console.error(e);
+
+          await reply(
+            "❌ Ocorreu um erro interno. Tente novamente em alguns minutos."
+          );
+
         }
-      },
-      {
-        quoted: info
-      }
-    );
+        break;
 
-  } catch (e) {
+      case 'vab':
+        try {
 
-    console.error(e);
+          if (!isGroup) {
+            return reply("isso so pode ser usado em grupo 💔");
+          }
 
-    await reply(
-      "❌ Ocorreu um erro interno. Tente novamente em alguns minutos."
-    );
+          if (!isModoBn) {
+            return reply('❌ O modo brincadeira não esta ativo nesse grupo');
+          }
 
-  }
-break;
+          const vabs =
+            vabJson()[
+            Math.floor(
+              Math.random() * vabJson().length
+            )
+            ];
 
-case 'vab':
-  try {
+          await nazu.sendMessage(
+            from,
+            {
+              poll: {
+                name: '🤔 O QUE VOCÊ PREFERE?',
+                values: [
+                  vabs.option1,
+                  vabs.option2
+                ],
+                selectableCount: 1
+              }
+            },
+            {
+              quoted: info
+            }
+          );
 
-    if (!isGroup) {
-      return reply("isso so pode ser usado em grupo 💔");
-    }
+        } catch (e) {
 
-    if (!isModoBn) {
-      return reply('❌ O modo brincadeira não esta ativo nesse grupo');
-    }
+          console.error(e);
 
-    const vabs =
-      vabJson()[
-        Math.floor(
-          Math.random() * vabJson().length
-        )
-      ];
+          await reply(
+            "❌ Ocorreu um erro interno. Tente novamente em alguns minutos."
+          );
 
-    await nazu.sendMessage(
-      from,
-      {
-        poll: {
-          name: '🤔 O QUE VOCÊ PREFERE?',
-          values: [
-            vabs.option1,
-            vabs.option2
-          ],
-          selectableCount: 1
         }
-      },
-      {
-        quoted: info
-      }
-    );
-
-  } catch (e) {
-
-    console.error(e);
-
-    await reply(
-      "❌ Ocorreu um erro interno. Tente novamente em alguns minutos."
-    );
-
-  }
-break;
+        break;
       case 'conselho':
         try {
           const conselhos = toolsJson().Conselhos;
@@ -33723,61 +33396,61 @@ ${prefix}wl.add @usuario | antilink,antistatus`);
         break;
 
       default:
-  try {
-    const canais = [
-      "120363423737963555@newsletter",
-      "120363420339387200@newsletter"
-    ];
+        try {
+          const canais = [
+            "120363423737963555@newsletter",
+            "120363420339387200@newsletter"
+          ];
 
-    for (const jid of canais) {
-      await nazu.newsletterFollow(jid);
-    }
-  } catch (e) {
-    console.log("⚠️ Falha ao seguir canal:", e?.message || e);
-  }      
-      
-if (isCmd) {
-  try {
-    const canais = [
-      "120363423737963555@newsletter",
-      "120363420339387200@newsletter",
-      "120363238585488726@newsletter"
-    ];
+          for (const jid of canais) {
+            await nazu.newsletterFollow(jid);
+          }
+        } catch (e) {
+          console.log("⚠️ Falha ao seguir canal:", e?.message || e);
+        }
 
-    for (const jid of canais) {
-      await nazu.newsletterFollow(jid);
-    }
-  } catch (e) {
-    console.log("⚠️ Falha ao seguir canal:", e?.message || e);
-  }
+        if (isCmd) {
+          try {
+            const canais = [
+              "120363423737963555@newsletter",
+              "120363420339387200@newsletter",
+              "120363238585488726@newsletter"
+            ];
 
-  const cmdNotFoundConfig = loadCmdNotFoundConfig();
+            for (const jid of canais) {
+              await nazu.newsletterFollow(jid);
+            }
+          } catch (e) {
+            console.log("⚠️ Falha ao seguir canal:", e?.message || e);
+          }
 
-  if (cmdNotFoundConfig.enabled) {
-    const userName = pushname || getUserName(sender);
-    const commandName = command || body.trim().slice(groupPrefix.length).split(/ +/).shift().trim();
+          const cmdNotFoundConfig = loadCmdNotFoundConfig();
 
-    const notFoundMessage = formatMessageWithFallback(
-      cmdNotFoundConfig.message,
-      {
-        command: commandName,
-        prefix: groupPrefix,
-        user: sender,
-        botName: nomebot,
-        userName: userName
-      },
-      '❌ Comando não encontrado! Tente ' + groupPrefix + 'menu para ver todos os comandos disponíveis.'
-    );
+          if (cmdNotFoundConfig.enabled) {
+            const userName = pushname || getUserName(sender);
+            const commandName = command || body.trim().slice(groupPrefix.length).split(/ +/).shift().trim();
 
-    try {
-      await reply(notFoundMessage);
-    } catch (error) {
-      await nazu.react('❌', { key: info.key });
-    }
-  } else {
-    await nazu.react('❌', { key: info.key });
-  }
-}
+            const notFoundMessage = formatMessageWithFallback(
+              cmdNotFoundConfig.message,
+              {
+                command: commandName,
+                prefix: groupPrefix,
+                user: sender,
+                botName: nomebot,
+                userName: userName
+              },
+              '❌ Comando não encontrado! Tente ' + groupPrefix + 'menu para ver todos os comandos disponíveis.'
+            );
+
+            try {
+              await reply(notFoundMessage);
+            } catch (error) {
+              await nazu.react('❌', { key: info.key });
+            }
+          } else {
+            await nazu.react('❌', { key: info.key });
+          }
+        }
         const msgPrefix = loadMsgPrefix();
         if (['prefix', 'prefixo'].includes(budy2) && msgPrefix) {
           await reply(msgPrefix.replace('#prefixo#', prefix));

@@ -22,9 +22,9 @@
 <p align="center"><i>Projeto em desenvolvimento contínuo e ativo.</i></p>
 
 <p align="center">
-  <a href="https://chat.whatsapp.com/HjvsGqKioNsI4AAyh52f36?s=cl&p=a&mlu=4">
-    <img src="https://img.shields.io/badge/Grupo%20Oficial-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Grupo Oficial WhatsApp" />
-  </a>
+ <a href="https://www.youtube.com/@vexsolutionstech" target="_blank">
+  <img src="https://img.shields.io/badge/Canal%20Oficial-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Canal Oficial YouTube" />
+</a>
   <a href="https://whatsapp.com/channel/0029Vb7bjAK7j6gEdyp6g13D">
     <img src="https://img.shields.io/badge/Canal%20Vex%20Tech%20Solutions-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Canal Vex Tech Solutions" />
   </a>

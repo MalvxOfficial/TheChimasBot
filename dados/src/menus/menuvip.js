@@ -7,7 +7,7 @@ async function menuVIP(prefix, botName = "MeuBot", userName = "Usuário", {
   header = `╭┈⊰ 🌸 『 *${botName}* 』\n┊Olá, #user#!\n╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯`,
   menuTopBorder = "╭┈",
   bottomBorder = "╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯",
-  menuItemIcon = "•.̇𖥨֗🍓⭟",
+  menuItemIcon = "•.̇𖥨֗💜⭟",
   separatorIcon = "❁",
   middleBorder = "┊"
 } = {}) {
@@ -99,7 +99,7 @@ async function listVIPCommands(prefix, botName = "MeuBot", userName = "Usuário"
   header = `╭┈⊰ 🌸 『 *${botName}* 』\n┊Olá, #user#!\n╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯`,
   menuTopBorder = "╭┈",
   bottomBorder = "╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯",
-  menuItemIcon = "•.̇𖥨֗🍓⭟",
+  menuItemIcon = "•.̇𖥨֗💜⭟",
   separatorIcon = "❁",
   middleBorder = "┊"
 } = {}) {

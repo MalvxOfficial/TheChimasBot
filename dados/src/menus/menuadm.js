@@ -3,7 +3,7 @@ export default async function menuadm(prefix, botName = "MeuBot", userName = "Us
     menuTopBorder = "╭┈",
     bottomBorder = "╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯",
     menuTitleIcon = "🍧ฺꕸ▸",
-    menuItemIcon = "•.̇𖥨֗🍓⭟",
+    menuItemIcon = "•.̇𖥨֗💜⭟",
     separatorIcon = "❁",
     middleBorder = "┊",
     adminMenuTitle = "🛡️ GESTÃO DE USUÁRIOS",
@@ -114,6 +114,7 @@ ${bottomBorder}
 
 ${menuTopBorder}${separatorIcon} *🔒 SEGURANÇA & PROTEÇÃO*
 ${middleBorder}
+${middleBorder}${menuItemIcon}${prefix}anticategoria [categoria]
 ${middleBorder}${menuItemIcon}${prefix}antiflood
 ${middleBorder}${menuItemIcon}${prefix}x9
 ${middleBorder}${menuItemIcon}${prefix}antidoc

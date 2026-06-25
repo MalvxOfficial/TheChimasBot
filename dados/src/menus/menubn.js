@@ -3,7 +3,7 @@ export default async function menubn(prefix, botName = "MeuBot", userName = "Usu
     menuTopBorder = "╭┈",
     bottomBorder = "╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯",
     menuTitleIcon = "🍧ฺꕸ▸",
-    menuItemIcon = "•.̇𖥨֗🍓⭟",
+    menuItemIcon = "•.̇𖥨֗💜⭟",
     separatorIcon = "❁",
     middleBorder = "┊",
     gamesMenuTitle = "🎮 JOGOS & DIVERSÃO 🎲",

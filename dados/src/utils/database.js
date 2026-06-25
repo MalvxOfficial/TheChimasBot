@@ -133,7 +133,7 @@ ensureJsonFileExists(MENU_DESIGN_FILE, {
   menuTopBorder: "╭┈",
   bottomBorder: "╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯",
   menuTitleIcon: "🍧ฺꕸ▸",
-  menuItemIcon: "•.̇𖥨֗🍓⭟",
+  menuItemIcon: "•.̇𖥨֗💜⭟",
   separatorIcon: "❁",
   middleBorder: "┊"
 });
@@ -2801,7 +2801,7 @@ const loadMenuDesign = () => {
         menuTopBorder: "╭┈",
         bottomBorder: "╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯",
         menuTitleIcon: "🍧ฺꕸ▸",
-        menuItemIcon: "•.̇𖥨֗🍓⭟",
+        menuItemIcon: "•.̇𖥨֗💜⭟",
         separatorIcon: "❁",
         middleBorder: "┊"
       };
@@ -2813,7 +2813,7 @@ const loadMenuDesign = () => {
       menuTopBorder: "╭┈",
       bottomBorder: "╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯",
       menuTitleIcon: "🍧ฺꕸ▸",
-      menuItemIcon: "•.̇𖥨֗🍓⭟",
+      menuItemIcon: "•.̇𖥨֗💜⭟",
       separatorIcon: "❁",
       middleBorder: "┊"
     };

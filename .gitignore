@@ -1,0 +1,9 @@
+# Dependency directories
+node_modules/
+
+# Local databases and runtime data
+dados/database/
+dados/logs/
+
+# Environment files
+.env

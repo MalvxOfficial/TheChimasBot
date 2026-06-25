@@ -3,7 +3,7 @@ export default async function menuLogos(prefix, botName = "MeuBot", userName = "
     menuTopBorder = "╭┈",
     bottomBorder = "╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯",
     menuTitleIcon = "🍧ฺꕸ▸",
-    menuItemIcon = "•.̇𖥨֗🍓⭟",
+    menuItemIcon = "•.̇𖥨֗💜⭟",
     separatorIcon = "❁",
     middleBorder = "┊",
     Logos1txtTitle = "🎨 LOGOTIPOS 1TXT",

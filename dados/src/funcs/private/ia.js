@@ -1385,7 +1385,17 @@ async function makeCognimaRequest(modelo, texto, systemPrompt = null, historico 
   }
   
   if (historico && historico.length > 0) {
-    messages.push(...historico);
+    const cleanHistory = historico.map(msg => {
+      const cleanMsg = { role: msg.role, content: msg.content };
+      if (msg.name) {
+        const sanitizedName = msg.name.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 64);
+        if (sanitizedName) {
+          cleanMsg.name = sanitizedName;
+        }
+      }
+      return cleanMsg;
+    });
+    messages.push(...cleanHistory);
   }
   
   messages.push({ role: 'user', content: texto });
