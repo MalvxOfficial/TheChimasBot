@@ -422,7 +422,7 @@ E para quem acompanha essa nova fase: **muito obrigado** por continuar apoiando 
 A Nazuna Bot é um projeto **open source** e deve permanecer assim. O arquivo original **não pode ser comercializado**. Se você utilizou a Nazuna como base e realizou **diversas modificações**, criando essencialmente um bot diferente, aí sim você pode comercializar a sua versão.
 
 ### 🏠 Hospedagens Autorizadas
-Nenhuma hospedagem, além da **[Vex Hostinger](https://nodzhostinger.com.br)**, tem permissão para disponibilizar a Nazuna Bot em uma aba de bots prontos. Não daremos suporte a bots comercializados dessa forma, pois isso vai contra os termos do projeto.
+Nenhuma hospedagem, além da **[Vex Hostinger](https://vexhost.com.br)**, tem permissão para disponibilizar a Nazuna Bot em uma aba de bots prontos. Não daremos suporte a bots comercializados dessa forma, pois isso vai contra os termos do projeto.
 
 > ✅ Fazer o **upload manual** da Nazuna em qualquer hospedagem para uso pessoal é **permitido**.
 
