@@ -3629,47 +3629,57 @@ Código: *${roleCode}*`,
 
     startDonoDivulgacaoWorker(nazu);
 
-    const getFileBuffer = async (mediakey, mediaType, options = {}) => {
-      try {
+const getFileBuffer = async (mediakey, mediaType, options = {}) => {
+    try {
         if (!mediakey) {
-          throw new Error('Chave de mídia inválida');
+            throw new Error('Chave de mídia inválida');
         }
-        const stream = await downloadContentFromMessage(mediakey, mediaType);
-        let buffer = Buffer.from([]);
-        const MAX_BUFFER_SIZE = 50 * 1024 * 1024;
+
+        // Corrige os tipos aceitos pelo Baileys
+        const typeMap = {
+            sticker: 'image',
+            stickerMessage: 'image',
+            imageMessage: 'image',
+            videoMessage: 'video',
+            audioMessage: 'audio',
+            documentMessage: 'document'
+        };
+
+        const downloadType = typeMap[mediaType] || mediaType;
+
+        console.log("[BUFFER] Tipo solicitado:", mediaType);
+        console.log("[BUFFER] Tipo usado no download:", downloadType);
+
+        const stream = await downloadContentFromMessage(
+            mediakey,
+            downloadType
+        );
+
+        const chunks = [];
         let totalSize = 0;
+        const MAX_BUFFER_SIZE = 50 * 1024 * 1024;
+
         for await (const chunk of stream) {
-          buffer = Buffer.concat([buffer, chunk]);
-          totalSize += chunk.length;
-          if (totalSize > MAX_BUFFER_SIZE) {
-            throw new Error(`Tamanho máximo de buffer excedido (${MAX_BUFFER_SIZE / (1024 * 1024)}MB)`);
-          }
+            chunks.push(chunk);
+            totalSize += chunk.length;
+
+            if (totalSize > MAX_BUFFER_SIZE) {
+                throw new Error(`Tamanho máximo excedido (${MAX_BUFFER_SIZE / 1024 / 1024}MB)`);
+            }
         }
-        if (options.saveToTemp) {
-          try {
-            const tempDir = pathz.join(__dirname, '..', 'database', 'tmp');
-            ensureDirectoryExists(tempDir);
-            const fileName = options.fileName || `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-            const extensionMap = {
-              image: '.jpg',
-              video: '.mp4',
-              audio: '.mp3',
-              document: '.bin'
-            };
-            const extension = extensionMap[mediaType] || '.dat';
-            const filePath = pathz.join(tempDir, fileName + extension);
-            fs.writeFileSync(filePath, buffer);
-            return filePath;
-          } catch (fileError) {
-            console.error('Erro ao salvar arquivo temporário:', fileError);
-          }
-        }
+
+        const buffer = Buffer.concat(chunks);
+
+        console.log("[BUFFER] Bytes recebidos:", buffer.length);
+        console.log("[BUFFER] Header:", buffer.subarray(0, 16).toString("hex"));
+
         return buffer;
-      } catch (error) {
-        console.error(`Erro ao obter buffer de ${mediaType}:`, error);
-        throw error;
-      }
-    };
+
+    } catch (err) {
+        console.error("[BUFFER] Erro:", err);
+        throw err;
+    }
+};
     const getMediaInfo = message => {
       if (!message) return null;
       if (message.imageMessage) return {
@@ -11505,6 +11515,13 @@ Entre em contato com o dono do bot:
         targetData.power = 100 + (newLevel * 15);
         saveEconomy(econ);
 
+        const levelingDataSet = loadLevelingSafe();
+        const userDataSet = getLevelingUser(levelingDataSet, target);
+        userDataSet.level = newLevel;
+        userDataSet.xp = calculateNextLevelXp(newLevel > 1 ? newLevel - 1 : 1);
+        userDataSet.patent = getPatent(newLevel);
+        saveLevelingSafe(levelingDataSet);
+
         return reply(`╭━━━⊱ ✅ *NÍVEL DEFINIDO* ⊱━━━╮\n│\n│ 👤 @${target.split('@')[0]}\n│ 📊 Nível: ${newLevel}\n│ ⚔️ Poder: ${targetData.power}\n│\n╰━━━━━━━━━━━━━━━━━━━━━━━━━╯`, { mentions: [target] });
       }
 
@@ -16839,7 +16856,7 @@ ${prefix}addsubbot @152656307871952`
       case 'addxp':
         if (!isOwner) return reply("Apenas o dono pode usar este comando.");
         if (!menc_os2 || !q) return reply("Marque um usuário e especifique a quantidade de XP.");
-        const xpToAdd = parseInt(q);
+        const xpToAdd = parseInt(args[args.length - 1]);
         if (isNaN(xpToAdd)) return reply("Quantidade de XP inválida.");
         const levelingDataAdd = loadLevelingSafe();
         const userDataAdd = getLevelingUser(levelingDataAdd, menc_os2);
@@ -16853,7 +16870,7 @@ ${prefix}addsubbot @152656307871952`
       case 'delxp':
         if (!isOwner) return reply("Apenas o dono pode usar este comando.");
         if (!menc_os2 || !q) return reply("Marque um usuário e especifique a quantidade de XP.");
-        const xpToRemove = parseInt(q);
+        const xpToRemove = parseInt(args[args.length - 1]);
         if (isNaN(xpToRemove)) return reply("Quantidade de XP inválida.");
         const levelingDataDel = loadLevelingSafe();
         const userDataDel = getLevelingUser(levelingDataDel, menc_os2);
@@ -25214,9 +25231,57 @@ ${prefix}togglecmdvip premium_ia off`);
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
+case 'togif':
+    if (!isQuotedSticker) return reply(`╭━━━⊱ 🎞️ *CONVERTER* 🎞️ ⊱━━━╮
+│
+│ ❌ Marque uma figurinha animada
+│    para converter em GIF!
+│
+│ 💡 Responda uma figurinha com:
+│ ${prefix}togif
+│
+╰━━━━━━━━━━━━━━━━━━━━━━╯`);
+{
+    const togifTempDir = path.join(__dirname, '../midias/temp_togif_' + Date.now());
 
+    try {
+        fs.mkdirSync(togifTempDir, { recursive: true });
 
+        const stickerBuffer = await getFileBuffer(
+            info.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage,
+            'image'
+        );
 
+        const inputWebp = path.join(togifTempDir, 'input.webp');
+        const outputMp4 = path.join(togifTempDir, 'output.mp4');
+
+        fs.writeFileSync(inputWebp, stickerBuffer);
+
+        const ffmpegCmd = `ffmpeg -i "${inputWebp}" -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -y "${outputMp4}"`;
+
+        await execAsync(ffmpegCmd);
+
+        await nazu.sendMessage(from, {
+            video: fs.readFileSync(outputMp4),
+            gifPlayback: true,
+            fileName: 'sticker.gif',
+            mimetype: 'video/mp4'
+        }, {
+            quoted: info
+        });
+
+    } catch (error) {
+        console.error('Erro no comando togif:', error);
+        await reply("❌ Ocorreu um erro ao converter a figurinha em GIF. Verifique se ela é uma figurinha animada.");
+    } finally {
+        try {
+            fs.rmSync(togifTempDir, { recursive: true, force: true });
+        } catch (cleanupError) {
+            console.error('Erro ao limpar arquivos temporários do togif:', cleanupError);
+        }
+    }
+}
+break;
 
       case 'totext':
       case 'transcrever': {
