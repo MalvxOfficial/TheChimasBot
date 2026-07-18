@@ -1,7 +1,7 @@
 <p align="center">
   <img 
     src="https://raw.githubusercontent.com/MalvxOfficial/TheChimasBot/main/dados/midias/TheChimasBotMenu.jpg"
-    width="600"
+    width="650"
     height="420"
     style="border-radius: 50%; object-fit: cover;"
   />
