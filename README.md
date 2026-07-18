@@ -1,6 +1,6 @@
 <p align="center">
   <img 
-    src="https://raw.githubusercontent.com/MalvxOfficial/nazuna/main/dados/midias/menu.jpg"
+    src="https://raw.githubusercontent.com/MalvxOfficial/TheChimasBot/main/dados/midias/menu.jpg"
     width="500"
     height="420"
     style="border-radius: 50%; object-fit: cover;"
