@@ -29,7 +29,6 @@
 - [📢 Continuidade do Projeto](#-continuidade-do-projeto)
 - [📊 O Legado em Números](#-o-legado-em-números)
 - [❓ Perguntas Frequentes](#-perguntas-frequentes)
-- [⚙️ Instalação no Termux](#️-instalação-no-termux)
 - [💸 Vale a pena pagar a API?](#-vale-a-pena-pagar-a-api)
 - [👥 Contribuidores](#-contribuidores)
 - [💖 Agradecimento à Comunidade](#-agradecimento-à-comunidade)
@@ -49,7 +48,7 @@
 <br>
 
 - Correção da criação da JSON global de configurações para o bemvindo
-- Correção da assistente nazuna (não tem mais erro de cache)
+- Correção da assistente 'The ChimasBot' (não tem mais erro de cache)
 - Comandos que estavam com erros foram removidos e serão adicionados novamente em futuras atualizações
 
 </details>
@@ -88,7 +87,7 @@
 
 Este projeto foi **oficialmente descontinuado pelo criador original (hiudy)**.
 
-No entanto, o desenvolvimento não parou. O projeto foi assumido pelo dev **Tokyo**, que agora detém o controle e os direitos sobre o código, dando continuidade à Nazuna Bot.
+No entanto, o desenvolvimento não parou. O projeto foi assumido pelo dev **Tokyo**, que agora detém o controle e os direitos sobre o código, dando continuidade à 'The ChimasBot' Bot.
 
 Atualmente, o bot segue em **desenvolvimento ativo**, recebendo atualizações, melhorias e correções, além de permanecer **open source para toda a comunidade**.
 
@@ -98,7 +97,7 @@ Atualmente, o bot segue em **desenvolvimento ativo**, recebendo atualizações, 
   </a>
 </p>
 
-> A Nazuna continua viva 🚀 — agora com uma nova fase, novos updates e foco na comunidade.
+>  'The ChimasBot' 🚀 — agora com uma nova fase, novos updates e foco na comunidade.
 
 ---
 
@@ -113,7 +112,7 @@ Atualmente, o bot segue em **desenvolvimento ativo**, recebendo atualizações, 
 | ⭐ Estrelas | ![Stars](https://img.shields.io/github/stars/DevTokyoVx/nazuna?style=flat-square&color=yellow) |
 | 🍴 Forks | ![Forks](https://img.shields.io/github/forks/DevTokyoVx/nazuna?style=flat-square&color=blue) |
 | 📝 Commits | ![Commits](https://img.shields.io/github/commit-activity/t/DevTokyoVx/nazuna?style=flat-square&color=purple) |
-| 💾 Tamanho do Repo | ![Size](https://img.shields.io/github/repo-size/DevTokyoVx/nazuna?style=flat-square&color=orange) |
+| 💾 Tamanho do Repositório | ![Size](https://img.shields.io/github/repo-size/DevTokyoVx/nazuna?style=flat-square&color=orange) |
 | 🐞 Issues Resolvidas | ![Closed Issues](https://img.shields.io/github/issues-closed/DevTokyoVx/nazuna?style=flat-square&color=red) |
 | 🔄 Pull Requests | ![PRs](https://img.shields.io/github/issues-pr-closed/DevTokyoVx/nazuna?style=flat-square&color=brightgreen) |
 | 🌐 Linguagem Principal | ![Language](https://img.shields.io/github/languages/top/DevTokyoVx/nazuna?style=flat-square&color=teal) |
@@ -134,9 +133,14 @@ Atualmente, o bot segue em **desenvolvimento ativo**, recebendo atualizações, 
 <details>
   <summary><strong>💰 É pago?</strong></summary>
 
-Não. A Nazuna Bot é totalmente gratuita e open source para a comunidade.
+Não. É totalmente gratuita e open source para toda a comunidade.
 
-Você paga pela API caso queira usar alguns outros comandos do bot.
+</details>
+
+<details>
+  <summary><strong>📦 O código é open source?</strong></summary>
+
+Sim. Todo o código permanece aberto para estudos e contribuições.
 </details>
 
 <details>
@@ -148,37 +152,31 @@ Sim. O projeto continua em desenvolvimento ativo sob manutenção do Tokyo.
 <details>
   <summary><strong>📱 Funciona em qualquer celular?</strong></summary>
 
-Sim, desde que o WhatsApp seja compatível com multi-dispositivos.
+Sim, desde que o WhatsApp seja compatível com multi-dispositivos (Aba de Dispositivos Conectados) e teclado.
 </details>
 
 <details>
   <summary><strong>☁️ Posso hospedar em VPS?</strong></summary>
 
-Sim. A Nazuna funciona normalmente em VPS Linux, Pterodactyl e hospedagens Node.js.
+Sim. funciona normalmente em VPS Linux, Pterodactyl e hospedagens Node.js.
 </details>
 
 <details>
-  <summary><strong>📦 O código é open source?</strong></summary>
+  <summary><strong>👤 Como posso virar Dono do bot?</strong></summary>
 
-Sim. Todo o código permanece aberto para estudos e contribuições.
-</details>
-
-<details>
-  <summary><strong>👤 Como virar dono do bot?</strong></summary>
-
-1️⃣ Ligue o bot e use o comando `#lid` (# = prefixo do bot)
+1️⃣ Ligue o bot no terminal e use o comando `(Prefixo)+lid` Exemplo `/lid`
 
 2️⃣ Acesse os arquivos do bot em `dados/src/config.json`
 
-3️⃣ Procure por `"lidOwner": "278696501993618@lid"`
+3️⃣ Procure por `"lidOwner": "X@lid"`
 
-4️⃣ Copie o que o bot te enviou ao usar o comando `#lid`
+4️⃣ Copie o que o bot te enviou ao usar o comando `lid`
 
-5️⃣ Voltando ao arquivo do bot, troque o `"278696501993618@lid"` pelo que o bot te enviou
+5️⃣ Voltando ao arquivo do bot, troque o `"X8@lid"` pelo que o nosso te enviou através do seu contato no whatsapp.
 
-6️⃣ Exemplo: `"lidOwner": "848285828@lid"`
+6️⃣ Exemplo: `"lidOwner": "999999999999999@lid"`
 
-7️⃣ Salve o arquivo, reinicie o bot e desfrute dos comandos de dono!
+7️⃣ Salve o arquivo, Reinicie o bot.
 </details>
 
 
@@ -187,33 +185,19 @@ Sim. Todo o código permanece aberto para estudos e contribuições.
 
 1️⃣ Certifique-se de ter configurado o número do dono corretamente 
 
-2️⃣ Use o comando `#prefix !`
+2️⃣ Use esse comando `prefix (Qualquer caractere especial)`
 
+Exemplo;
 ```
-#prefix !
+/prefix !
 ```
 
-3️⃣ O símbolo na frente do comando prefix é o novo prefixo que vai ser aplicado
+3️⃣ O símbolo na frente do comando prefix  é o novo prefixo que vai ser aplicado
+`
 
-
-4️⃣ Pronto! Prefixo do bot alterado com sucesso.
-</details>
-
-
-<details>
-  <summary><strong>💸 Como ativar minha chave de API?</strong></summary>
-
-1️⃣ Acesse o site https://vexapi.com.br e crie sua conta
-
-2️⃣ Acesse a aba de planos https://vexapi.com.br/plans
-
-3️⃣ Escolha o plano ideal para você
-
-4️⃣ Selecione o plano e efetue o pagamento
-
-5️⃣ Dentro de um minuto você vai receber a confirmação de ativação no seu e-mail
-
-6️⃣ Parabéns! Você ativou sua API-key.
+4️⃣ Outra Alternativa
+Você pode manualmente substituir no mesmo diretório onde colocou o lid
+`dados/src/config.json` Procure por `"prefixo": "/"`
 </details>
 
 <details>
@@ -267,7 +251,7 @@ Nós não damos suporte a isso. O bot é um projeto open source e já vem integr
 <details>
   <summary><strong>🤝 Como contribuir?</strong></summary>
 
-Você pode abrir Pull Requests, Issues ou sugerir melhorias no repositório oficial.
+Você pode abrir Pull Requests, Issues ou sugerir melhorias no repositório oficial. (O repositório TheChimasBot não está aceitando isto, somente reports de erros/issues.)
 </details>
 
 ---
@@ -279,27 +263,36 @@ Você pode abrir Pull Requests, Issues ou sugerir melhorias no repositório ofic
 
 <br>
 
-### 1️⃣ Entre na pasta `/sdcard`
-> Recomendado caso queira editar os arquivos do bot facilmente.
+*Instale o termux a partir do F-Droid.
 
+### 3️⃣ Entre na pasta do projeto, mas antes.
+Instale um repositório pro termux, os repositórios padrões do termux são quebrados.
 ```bash
-cd /sdcard
+termux-change-repo
+```
+Apenas dê enter(tecla de enviar) em tudo. aguarde terminar e faça o próximo passo. Esse processo pode demorar um pouco.
+
+Atualize os repositórios caso aconteça conflitos durante a instalação.
+```bash
+pkg update -y && pkg upgrade -y
+```
+Esse processo pode demorar um pouco.
+
+Para certificar que está no lugar certo para começar a usar o bot, faça isso.
+### 1️⃣ Entre na pasta. `cd ~`
+```bash
+cd ~
 ```
 
----
 
-### 2️⃣ Clone o repositório oficial da Nazuna
-
+Após isso
+### 2️⃣ Clone o repositório do 'The ChimasBot'
 ```bash
-git clone https://github.com/DevTokyoVx/nazuna
+git clone https://github.com/DevTokyoVx/TheChimasBot
 ```
-
----
-
-### 3️⃣ Entre na pasta do projeto
-
+Agora copie e cole isso no terminal para entrar dentro do projeto depois de clonar.
 ```bash
-cd /sdcard/nazuna
+cd ~/TheChimasBot
 ```
 
 ---
@@ -314,25 +307,21 @@ npm start
 
 ---
 
-### 5️⃣ Escolha a forma de conexão
+### 5️⃣ Forma de conexão
 
 ```
-01 - QR Code
-02 - Pairing Code
+01 - Pairing Code(Código de Pareamento)
 ```
+A opcão de código por Qrcode foi desativado.
 
 <br>
 <p align="center">
-  <sub>✅ Pronto! A Nazuna Bot foi instalada com sucesso.</sub>
+  <sub>✅ Pronto! 'The ChimasBot' foi instalado com sucesso.</sub>
 </p>
 
 </details>
 
 ---
-
-# 💸 Vale a pena pagar a API?
-
-**Sim!** A Vex API é o que destrava o potencial completo da Nazuna. Sem ela, o bot já funciona muito bem — mas com ela, você tem acesso a uma série de comandos poderosos de download, edição de imagem, música e muito mais.
 
 Confira abaixo todos os comandos que dependem da Vex API:
 
@@ -356,8 +345,6 @@ Confira abaixo todos os comandos que dependem da Vex API:
 | 📃 `transcrever` | Converte áudios para texto |
 | 📑 `autotranscrever` | Detecta áudios no grupo e transforma rapidamente em textos |
 </div>
-
-> Acesse [vexapi.com.br/plans](https://vexapi.com.br/plans) e escolha o plano ideal para o seu uso.
 
 ---
 
@@ -388,14 +375,14 @@ Aos antigos contribuidores: fica o reconhecimento por tudo que ajudaram a constr
 E para quem acompanha essa nova fase: **muito obrigado** por continuar apoiando o projeto. 🚀
 
 <p align="center">
-  <sub>Projeto original por <a href="https://github.com/hiudyy">Hiudy</a> • Atualmente mantido por Tokyo</sub>
+  <sub>Projeto original por <a href="https://github.com/hiudyy">Hiudy</a> • Atualmente mantido por Tokyo e modificado por ChimasAlice</sub>
 </p>
 
 ---
 
 ## 📜 Termos de Uso
 
-> Ao utilizar a Nazuna Bot, você concorda com os termos descritos abaixo.
+> Ao utilizar o 'The ChimasBot' Bot, você concorda com os termos descritos abaixo.
 
 <details>
   <summary><strong>📌 Clique aqui para ler os Termos de Uso completos</strong></summary>
@@ -403,7 +390,7 @@ E para quem acompanha essa nova fase: **muito obrigado** por continuar apoiando 
 <br>
 
 ### 🔓 Uso Open Source
-A Nazuna Bot é um projeto **open source** e deve permanecer assim. O arquivo original **não pode ser comercializado**. Se você utilizou a Nazuna como base e realizou **diversas modificações**, criando essencialmente um bot diferente, aí sim você pode comercializar a sua versão.
+O 'The ChimasBot' Bot é um projeto **open source** e deve permanecer assim. O arquivo original **não pode ser comercializado**. Se você utilizou a 'The ChimasBot' como base e realizou **diversas modificações**, criando essencialmente um bot diferente, aí sim você pode comercializar a sua **versão**.
 
 ### 🏠 Hospedagens Autorizadas
 Nenhuma hospedagem, além da **[Vex Hostinger](https://vexhost.com.br)**, tem permissão para disponibilizar a Nazuna Bot em uma aba de bots prontos. Não daremos suporte a bots comercializados dessa forma, pois isso vai contra os termos do projeto.
@@ -415,7 +402,7 @@ Você pode clonar o repositório e modificar o projeto livremente, criando sua p
 
 No entanto, essas modificações não devem ser divulgadas como uma versão oficial do projeto Nazuna, nem associadas ao repositório original, para evitar confusões ou mal-entendidos na comunidade.
 
-O repositório oficial da Nazuna Bot é mantido exclusivamente pelo DevTokyo, e apenas ele é responsável pelas versões oficiais e atualizações públicas do projeto.
+O repositório oficial da 'The ChimasBot', Nazuna Bot, é mantido exclusivamente pelo DevTokyo, e apenas ele é responsável pelas versões oficiais e atualizações públicas do projeto.
 
 ### ⚠️ Isenção de Responsabilidade
 Não nos responsabilizamos caso seu número seja **banido do WhatsApp**. O WhatsApp está em constante atualização e proíbe cada vez mais o uso de bots em sua plataforma. Use com consciência e por sua conta e risco.
