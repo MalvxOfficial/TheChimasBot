@@ -1,13 +1,13 @@
 <p align="center">
   <img 
-    src="https://raw.githubusercontent.com/DevTokyoVx/nazuna/main/dados/midias/menu.jpg"
+    src="https://raw.githubusercontent.com/MalvxOfficial/nazuna/main/dados/midias/menu.jpg"
     width="500"
     height="420"
     style="border-radius: 50%; object-fit: cover;"
   />
 </p>
 
-<h1 align="center">nazuna Bot</h1>
+<h1 align="center">The ChimasBot</h1>
 
 <p align="center">
   <img src="https://img.shields.io/badge/STATUS-ATIVO-success?style=for-the-badge" alt="Status: Ativo" />
@@ -19,23 +19,7 @@
   <img src="https://img.shields.io/github/forks/DevTokyoVx/nazuna?style=for-the-badge&color=blue&label=Forks" alt="Forks" />
 </p>
 
-<p align="center"><i>Projeto em desenvolvimento contínuo e ativo.</i></p>
-
-<p align="center">
-
- <a href="https://chat.whatsapp.com/HjvsGqKioNsI4AAyh52f36?s=cl&p=a&mlu=4">
-    <img src="https://img.shields.io/badge/Grupo%20Oficial-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Grupo Oficial WhatsApp" />
-  </a>
- <a href="https://www.youtube.com/@vexsolutionstech" target="_blank">
-  <img src="https://img.shields.io/badge/Canal%20Oficial-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Canal Oficial YouTube" />
-</a>
-  <a href="https://whatsapp.com/channel/0029Vb7bjAK7j6gEdyp6g13D">
-    <img src="https://img.shields.io/badge/Canal%20Vex%20Tech%20Solutions-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Canal Vex Tech Solutions" />
-  </a>
-  <a href="https://whatsapp.com/channel/0029Vb5yayN6rsQmbg82PW0s">
-    <img src="https://img.shields.io/badge/Canal%20Nazuna%20Bot-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Canal Nazuna Bot Oficial" />
-  </a>
-</p>
+<p align="center"><i>Projeto em Desenvolvimento</i></p>
 
 ---
 
