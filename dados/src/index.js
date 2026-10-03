@@ -1,6 +1,12 @@
+import { compressVideoDuration } from './funcs/utils/StickerExt.js';
+import ffmpeg from 'fluent-ffmpeg';
+const pendingStickers = new Map();
 import fs from 'fs';
 import path from 'path';
+import ytdl from '@distube/ytdl-core';
+import ytSearch from 'yt-search';
 import sharp from 'sharp'
+import fetch from 'node-fetch';
 function patchBaileysNewsletterFollow() {
   try {
 
@@ -540,7 +546,6 @@ const {
   totext,
   pinterest,
   igdl,
-  kwai,
   sendSticker,
   styleText,
   logos,
@@ -579,7 +584,7 @@ const {
 } = modules.default;
 
 
-async function createGroupMessage(NazunaSock, groupMetadata, participants, settings, isWelcome = true) {
+async function createGroupMessage(TheChimasBotSock, groupMetadata, participants, settings, isWelcome = true) {
   const globalJson = JSON.parse(
     fs.readFileSync(DATABASE_DIR + '/global.json', 'utf-8')
   );
@@ -604,13 +609,11 @@ async function createGroupMessage(NazunaSock, groupMetadata, participants, setti
     mentions
   };
 
-  if (settings.photo === false) {
-    // Foto de boas-vindas desativada explicitamente: não envia imagem em nenhuma hipótese.
-  } else if (settings.photoType === 'api' && isWelcome) {
-    let profilePicUrl = 'https://raw.githubusercontent.com/nazuninha/uploads/main/outros/1747053564257_bzswae.bin';
+  if (settings.photoType === 'api' && isWelcome) {
+    let profilePicUrl = 'https://raw.githubusercontent.com/chimuninha/uploads/main/outros/1747053564257_bzswae.bin';
 
     if (participants.length === 1) {
-      profilePicUrl = await NazunaSock.profilePictureUrl(participants[0], 'image')
+      profilePicUrl = await TheChimasBotSock.profilePictureUrl(participants[0], 'image')
         .catch(() => profilePicUrl);
     }
 
@@ -668,7 +671,7 @@ function formatMessageText(template, replacements) {
   return text;
 }
 
-const handleCaptchaResponse = async (nazu, info, from, sender, text) => {
+const handleCaptchaResponse = async (chimu, info, from, sender, text) => {
 
   await CaptchaIndex.init();
 
@@ -696,12 +699,12 @@ const handleCaptchaResponse = async (nazu, info, from, sender, text) => {
         console.log('[CAPTCHA] EXPIRADO');
 
         try {
-          await nazu.sendMessage(isCapUser.groupId, {
+          await chimu.sendMessage(isCapUser.groupId, {
             text: `⏰ @${senderNormalized} demorou demais e foi removido.`,
             mentions: [isCapUser.idOrigin]
           });
 
-          await nazu.groupParticipantsUpdate(
+          await chimu.groupParticipantsUpdate(
             isCapUser.groupId,
             [isCapUser.idOrigin],
             'remove'
@@ -725,26 +728,26 @@ const handleCaptchaResponse = async (nazu, info, from, sender, text) => {
         CaptchaIndex.remove(senderNormalized);
 
         try {
-          const groupMetadata = await nazu.groupMetadata(isCapUser.groupId);
+          const groupMetadata = await chimu.groupMetadata(isCapUser.groupId);
           const groupSettings = await loadGroupSettings(isCapUser.groupId);
 
           if (groupSettings.bemvindo) {
             const message = await createGroupMessage(
-              nazu,
+              chimu,
               groupMetadata,
               [isCapUser.idOrigin],
               groupSettings.welcome || { text: groupSettings.textbv }
             );
-            await nazu.sendMessage(isCapUser.groupId, message);
+            await chimu.sendMessage(isCapUser.groupId, message);
           } else {
-            await nazu.sendMessage(isCapUser.groupId, {
+            await chimu.sendMessage(isCapUser.groupId, {
               text: `✅ @${senderNormalized} liberado com sucesso!`,
               mentions: [isCapUser.idOrigin]
             });
           }
         } catch (e) {
           console.log('[ERRO WELCOME PÓS-CAPTCHA]:', e.message);
-          await nazu.sendMessage(isCapUser.groupId, {
+          await chimu.sendMessage(isCapUser.groupId, {
             text: `✅ @${senderNormalized} liberado com sucesso!`,
             mentions: [isCapUser.idOrigin]
           });
@@ -978,7 +981,7 @@ setInterval(() => {
   saveJidLidCache();
 }, 5 * 60 * 1000);
 
-async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirationManager = null) {
+async function ChimuninhaBotExec(chimu, info, store, messagesCache, rentalExpirationManager = null) {
   // Log de início de processamento para debug paralelo
   const msgId = info?.key?.id?.slice(-6) || 'unknown';
   const from = info?.key?.remoteJid || 'unknown';
@@ -994,7 +997,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     // Notifica o dono sobre a mudança automática
     const ownerJid = `${config.numerodono}@s.whatsapp.net`;
     try {
-      await nazu.sendMessage(ownerJid, {
+      await chimu.sendMessage(ownerJid, {
         text: `⚠️ *PREFIXO AUTOMÁTICO CORRIGIDO*\n\n❌ O símbolo "$" é reservado e não pode ser usado como prefixo.\n\n✅ O prefixo foi alterado automaticamente para "/" ao iniciar o bot.\n\n💡 Use ${config.prefixo}prefix para alterar para outro símbolo válido.`
       });
     } catch (notifyError) {
@@ -1048,11 +1051,11 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
   };
 
   const deleteChatByLastMessage = async (jid) => {
-    if (!nazu?.chatModify) return false;
+    if (!chimu?.chatModify) return false;
 
     const lastMsgInChat = getLastMessageInChat(jid);
     if (lastMsgInChat?.key && lastMsgInChat?.messageTimestamp) {
-      await nazu.chatModify({
+      await chimu.chatModify({
         delete: true,
         lastMessages: [
           {
@@ -1064,14 +1067,14 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       return true;
     }
 
-    await nazu.chatModify({ delete: true }, jid);
+    await chimu.chatModify({ delete: true }, jid);
     return true;
   };
 
   const clearChatHistorySafe = async (jid) => {
-    if (!nazu?.chatModify) return false;
+    if (!chimu?.chatModify) return false;
     try {
-      await nazu.chatModify({ clear: 'all' }, jid);
+      await chimu.chatModify({ clear: 'all' }, jid);
       return true;
     } catch (e) {
       if (typeof e?.message === 'string' && e.message.toLowerCase().includes('not supported')) {
@@ -1091,14 +1094,14 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
           return cached;
         }
 
-        const freshData = await nazu.groupMetadata(groupId).catch(() => ({}));
+        const freshData = await chimu.groupMetadata(groupId).catch(() => ({}));
         await optimizer.modules.cacheManager.setIndexGroupMeta(groupId, freshData);
         return freshData;
       }
 
-      return await nazu.groupMetadata(groupId).catch(() => ({}));
+      return await chimu.groupMetadata(groupId).catch(() => ({}));
     } catch (error) {
-      return await nazu.groupMetadata(groupId).catch(() => ({}));
+      return await chimu.groupMetadata(groupId).catch(() => ({}));
     }
   }
 
@@ -1267,7 +1270,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
   // ═══════════════════════════════════════════════════════════════════
 
 
-  async function handleAutoDownload(nazu, from, url, info) {
+  async function handleAutoDownload(chimu, from, url, info) {
     try {
 
       // Detectar tipo de URL e usar o módulo específico
@@ -1289,11 +1292,6 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       else if (urlLower.includes('instagram.com') || urlLower.includes('instagr.am')) {
         downloadModule = igdl;
         platformName = 'Instagram';
-      }
-      // Kwai
-      else if (urlLower.includes('kwai.com') || urlLower.includes('kwa.am')) {
-        downloadModule = kwai;
-        platformName = 'kwai';
       }
       // Facebook
       else if (urlLower.includes('facebook.com') || urlLower.includes('fb.watch')) {
@@ -1327,7 +1325,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       if (platformName === 'YouTube') {
         result = await youtube.mp3(url, 128);
         if (result && result.ok) {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             audio: result.buffer,
             mimetype: 'audio/mpeg',
             fileName: result.filename || 'audio.mp3'
@@ -1341,20 +1339,20 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       else if (platformName === 'TikTok') {
 
         // Aviso antes de qualquer verificação/download
-        await nazu.sendMessage(from, { text: 'Aguarde um momentinho... ☀️' }, { quoted: info });
+        await chimu.sendMessage(from, { text: 'Aguarde um momentinho... ☀️' }, { quoted: info });
 
         const result = await tiktok.dl(url);
 
         if (!result?.ok) {
           // Mostra só a mensagem de erro da API
-          await nazu.sendMessage(from, { text: result.msg || 'Erro desconhecido' }, { quoted: info });
+          await chimu.sendMessage(from, { text: result.msg || 'Erro desconhecido' }, { quoted: info });
           return false;
         }
 
         if (result.urls?.length > 0) {
           const videoUrl = result.urls[0];
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             video: { url: videoUrl },
             caption: `📱 *TikTok*\n\n${result.title || ''}`,
             mimetype: 'video/mp4'
@@ -1363,7 +1361,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
           return true;
         }
 
-        await nazu.sendMessage(from, { text: '❌ Nenhum vídeo disponível para este TikTok.' }, { quoted: info });
+        await chimu.sendMessage(from, { text: '❌ Nenhum vídeo disponível para este TikTok.' }, { quoted: info });
         return false;
       }
 
@@ -1371,25 +1369,25 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       else if (platformName === 'Instagram') {
 
         // Aviso antes de qualquer verificação/download
-        await nazu.sendMessage(from, { text: 'Aguarde um momentinho... ☀️' }, { quoted: info });
+        await chimu.sendMessage(from, { text: 'Aguarde um momentinho... ☀️' }, { quoted: info });
 
         const result = await igdl.dl(url);
 
         if (!result?.ok || !result.data || result.data.length === 0) {
-          await nazu.sendMessage(from, { text: result?.msg || 'Nenhum conteúdo encontrado no Instagram.' }, { quoted: info });
+          await chimu.sendMessage(from, { text: result?.msg || 'Nenhum conteúdo encontrado no Instagram.' }, { quoted: info });
           return false;
         }
 
         const media = result.data[0];
 
         if (media.type === 'video') {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             video: { url: media.url },
             caption: '📸 *Instagram*',
             mimetype: 'video/mp4'
           }, { quoted: info });
         } else {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             image: { url: media.url },
             caption: '📸 *Instagram*'
           }, { quoted: info });
@@ -1397,32 +1395,11 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
 
         return true;
       }
-      // Kwai
-      else if (platformName === 'Kwai') {
-        result = await kwai.dl(url);
-        if (result && result.ok && result.data && result.data.length > 0) {
-          const media = result.data[0];
-          if (media.type === 'video') {
-            await nazu.sendMessage(from, {
-              video: media.buff,
-              caption: '📸 *Kwai*',
-              mimetype: 'video/mp4'
-            }, { quoted: info });
-          } else {
-            await nazu.sendMessage(from, {
-              image: media.buff,
-              caption: '📸 *Kwai*'
-            }, { quoted: info });
-          }
-          return true;
-        }
-      }
-
       // Facebook
       else if (platformName === 'Facebook') {
         result = await facebook.downloadHD(url);
         if (result && result.ok && result.buffer) {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             video: result.buffer,
             caption: `📘 *Facebook* - ${result.resolution || 'HD'}`,
             mimetype: 'video/mp4'
@@ -1437,13 +1414,13 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
         if (result && result.ok && result.urls && result.urls.length > 0) {
           const mediaUrl = result.urls[0];
           if (result.type === 'video') {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               video: { url: mediaUrl },
               caption: '📌 *Pinterest*',
               mimetype: 'video/mp4'
             }, { quoted: info });
           } else {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               image: { url: mediaUrl },
               caption: '📌 *Pinterest*'
             }, { quoted: info });
@@ -1456,7 +1433,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       else if (platformName === 'Spotify') {
         result = await spotify.download(url);
         if (result && result.ok && result.buffer) {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             audio: result.buffer,
             mimetype: 'audio/mpeg',
             fileName: result.filename || `${result.title || 'audio'}.mp3`
@@ -1469,7 +1446,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       else if (platformName === 'SoundCloud') {
         result = await soundcloud.download(url);
         if (result && result.ok && result.buffer) {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             audio: result.buffer,
             mimetype: 'audio/mpeg',
             fileName: result.filename || `${result.title || 'audio'}.mp3`
@@ -1494,7 +1471,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
           if (result && result.data) {
             const videoUrl = result.data.video || result.data.videoUrl || result.data.url;
             if (videoUrl) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 video: { url: videoUrl },
                 caption: `🎬 *${platformName}*`,
                 mimetype: 'video/mp4'
@@ -1524,8 +1501,6 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     menuSticker,
     menuIa,
     menuAlterador,
-    menuLogos,
-    menuedits,
     menuTopCmd,
     menuRPG,
     menuVIP,
@@ -1625,14 +1600,14 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
 
       // Se for JID, converte para LID usando cache
       if (sender && isValidJid(sender)) {
-        sender = await getLidFromJidCached(nazu, sender);
+        sender = await getLidFromJidCached(chimu, sender);
       }
     } else {
       sender = info.key.remoteJid;
 
       // Se for JID no PV, converte para LID usando cache
       if (sender && isValidJid(sender)) {
-        sender = await getLidFromJidCached(nazu, sender);
+        sender = await getLidFromJidCached(chimu, sender);
       }
     }
 
@@ -1651,8 +1626,8 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     const subDonoList = loadSubdonos();
     const isSubOwner = isSubdono(sender);
     const ownerJid = `${numerodono}@s.whatsapp.net`;
-    const botId = getBotId(nazu);
-    const isBotSender = sender === botId || sender === nazu.user?.id?.split(':')[0] + '@s.whatsapp.net' || sender === nazu.user?.id?.split(':')[0] + '@lid';
+    const botId = getBotId(chimu);
+    const isBotSender = sender === botId || sender === chimu.user?.id?.split(':')[0] + '@s.whatsapp.net' || sender === chimu.user?.id?.split(':')[0] + '@lid';
 
     const senderBase = sender.split('@')[0];
     const ownerBase = String(numerodono);
@@ -1683,7 +1658,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     const activeIntervals = new Map();
 
     // ==================== START ====================
-    function startAutoAcceptSystem(nazu, from) {
+    function startAutoAcceptSystem(chimu, from) {
       if (activeIntervals.has(from)) return;
 
       const interval = setInterval(async () => {
@@ -1697,10 +1672,10 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
           let requests = [];
 
           try {
-            if (nazu.groupRequestParticipantsList) {
-              requests = await nazu.groupRequestParticipantsList(from);
-            } else if (nazu.groupGetRequestParticipants) {
-              requests = await nazu.groupGetRequestParticipants(from);
+            if (chimu.groupRequestParticipantsList) {
+              requests = await chimu.groupRequestParticipantsList(from);
+            } else if (chimu.groupGetRequestParticipants) {
+              requests = await chimu.groupGetRequestParticipants(from);
             }
           } catch (err) {
             console.error('[SYSTEM] ERRO AO BUSCAR REQUESTS:', err);
@@ -1715,7 +1690,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
 
             // Aprovação Direta (Sem Captcha)
             try {
-              await nazu.groupRequestParticipantsUpdate(from, [jid], 'approve');
+              await chimu.groupRequestParticipantsUpdate(from, [jid], 'approve');
             } catch (err) {
               console.error('[SYSTEM] ERRO AO APROVAR USUÁRIO:', jid, err);
             }
@@ -1783,7 +1758,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     };
     const body = getMessageText(info.message) || info?.text || '';
     // ==================== INICIAR ====================
-    startAutoAcceptSystem(nazu, from);
+    startAutoAcceptSystem(chimu, from);
 
     // ==================== NO HANDLER ====================
     // chamar isso em TODA mensagem
@@ -1885,7 +1860,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       try {
         if (!roleData || !roleData.announcementKey || !roleData.announcementKey.id) return;
         try {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             delete: {
               remoteJid: from,
               fromMe: roleData.announcementKey.fromMe !== undefined ? roleData.announcementKey.fromMe : true,
@@ -1903,7 +1878,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
           ...goingList.slice(0, MAX_MENTIONS_IN_ANNOUNCE),
           ...notGoingList.slice(0, MAX_MENTIONS_IN_ANNOUNCE)
         ];
-        const sentMessage = await nazu.sendMessage(from, { text: announcementText, mentions });
+        const sentMessage = await chimu.sendMessage(from, { text: announcementText, mentions });
         if (sentMessage?.key?.id) {
           if (!groupData.roleMessages || typeof groupData.roleMessages !== 'object') {
             groupData.roleMessages = {};
@@ -2133,7 +2108,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
             if (debug) {
               console.log('[DEBUG CAPTCHA] ✅ Resposta correta! Aprovando no grupo:', captchaData.groupId);
             }
-            await nazu.groupRequestParticipantsUpdate(captchaData.groupId, [sender], 'approve');
+            await chimu.groupRequestParticipantsUpdate(captchaData.groupId, [sender], 'approve');
             await reply('✅ *Correto!* Você foi aprovado no grupo. Bem-vindo! 🎉');
 
             // Limpar captcha pendente do índice
@@ -2148,7 +2123,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
 
               // Notificação X9
               if (groupDataCaptcha.x9) {
-                await nazu.sendMessage(captchaData.groupId, {
+                await chimu.sendMessage(captchaData.groupId, {
                   text: `✅ *X9 Report:* @${sender.split('@')[0]} passou na verificação de captcha e foi aprovado automaticamente.`,
                   mentions: [sender],
                 }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
@@ -2165,7 +2140,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
             if (debug) {
               console.log('[DEBUG CAPTCHA] ❌ Resposta incorreta! Recusando no grupo:', captchaData.groupId);
             }
-            await nazu.groupRequestParticipantsUpdate(captchaData.groupId, [sender], 'reject');
+            await chimu.groupRequestParticipantsUpdate(captchaData.groupId, [sender], 'reject');
             await reply('❌ *Resposta incorreta!* Sua solicitação foi recusada. Você pode tentar solicitar novamente.');
 
             // Limpar captcha pendente do índice
@@ -2207,7 +2182,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
         return;
       };
       if (antipvData.mode === 'antipv3' && isCmd && !isOwner && !isPremium && !isTm2Command) {
-        await nazu.updateBlockStatus(sender, 'block');
+        await chimu.updateBlockStatus(sender, 'block');
         await reply('🚫 Você foi bloqueado por usar comandos no privado!');
         return;
       };
@@ -2257,8 +2232,8 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       groupMetadata.participants?.filter(p => p.admin === 'admin' || p.admin === 'superadmin').map(extractParticipantId).filter(Boolean) || [];
 
     // Converte todos os membros e admins para LID (usando cache)
-    const AllgroupMembers = await convertIdsToLid(nazu, rawMembers);
-    const groupAdmins = await convertIdsToLid(nazu, rawAdmins);
+    const AllgroupMembers = await convertIdsToLid(chimu, rawMembers);
+    const groupAdmins = await convertIdsToLid(chimu, rawAdmins);
 
     // Debug log
     debugLog('Membros e Admins convertidos:', {
@@ -2268,28 +2243,28 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     });
 
     // Robust bot ID extraction with multiple fallback mechanisms
-    const getBotNumber = (nazu) => {
+    const getBotNumber = (chimu) => {
       try {
         // Tenta pegar LID primeiro
-        if (nazu.user?.lid) {
+        if (chimu.user?.lid) {
           // Remove o sufixo `:XX` se existir (ex: 267955023654984:13@lid -> 267955023654984@lid)
-          const lid = nazu.user.lid;
+          const lid = chimu.user.lid;
           const cleanLid = lid.includes(':') ? lid.split(':')[0] + '@lid' : lid;
           return cleanLid;
         }
 
         // Fallback para ID padrão
-        if (nazu.user?.id) {
-          const botId = nazu.user.id.split(':')[0];
+        if (chimu.user?.id) {
+          const botId = chimu.user.id.split(':')[0];
           return `${botId}@s.whatsapp.net`;
         }
 
         // Usa helper se disponível
         if (typeof getBotId === 'function') {
-          return getBotId(nazu);
+          return getBotId(chimu);
         }
 
-        console.warn('Unable to determine bot number - user object:', nazu.user);
+        console.warn('Unable to determine bot number - user object:', chimu.user);
         return null;
       } catch (error) {
         console.error('Error extracting bot number:', error);
@@ -2297,11 +2272,11 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       }
     };
 
-    const botNumber = getBotNumber(nazu);
+    const botNumber = getBotNumber(chimu);
 
     // Converte o botNumber para LID se for JID
     const botNumberLid = botNumber && isValidJid(botNumber)
-      ? await getLidFromJidCached(nazu, botNumber)
+      ? await getLidFromJidCached(chimu, botNumber)
       : botNumber;
 
     const isBotAdmin = !isGroup || !botNumberLid ? false : idInArray(botNumberLid, groupAdmins);
@@ -2370,10 +2345,10 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       }
       if (caption.length < groupData.minMessage.minDigits) {
         try {
-          await nazu.sendMessage(from, { delete: info.key });
+          await chimu.sendMessage(from, { delete: info.key });
           if (groupData.minMessage.action === 'ban') {
             if (isBotAdmin) {
-              await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+              await chimu.groupParticipantsUpdate(from, [sender], 'remove');
               await reply(`🚫 Usuário removido por enviar mídia sem legenda suficiente (mínimo: ${groupData.minMessage.minDigits} caracteres).`);
             } else {
               await reply(`⚠️ Mídia sem legenda suficiente detectada, mas não sou admin para remover o usuário.`);
@@ -2390,7 +2365,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     if (isGroup && isStatusMention && isAntiStatus && !isGroupAdmin) {
       if (!isUserWhitelisted(sender, 'antistatus')) {
         if (isBotAdmin) {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             delete: {
               remoteJid: from,
               fromMe: false,
@@ -2398,7 +2373,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
               participant: sender
             }
           });
-          await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+          await chimu.groupParticipantsUpdate(from, [sender], 'remove');
         } else {
           await reply("⚠️ Não posso remover o usuário porque não sou administrador.");
         }
@@ -2407,7 +2382,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     if (isGroup && isButtonMessage && isAntiBtn && !isGroupAdmin) {
       if (!isUserWhitelisted(sender, 'antibtn')) {
         if (isBotAdmin) {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             delete: {
               remoteJid: from,
               fromMe: false,
@@ -2415,7 +2390,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
               participant: sender
             }
           });
-          await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+          await chimu.groupParticipantsUpdate(from, [sender], 'remove');
         } else {
           await reply("⚠️ Não posso remover o usuário porque não sou administrador.");
         }
@@ -2467,7 +2442,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
         userName = pushNameFromMsg;
       } else {
         try {
-          const fetchedName = await nazu.getName(fromGroup, participant);
+          const fetchedName = await chimu.getName(fromGroup, participant);
           const numeroLimpoFallback = participant.split('@')[0];
 
           if (fetchedName && fetchedName !== numeroLimpoFallback) {
@@ -2481,7 +2456,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       }
 
       try {
-        profilePic = await nazu.profilePictureUrl(participant, 'image');
+        profilePic = await chimu.profilePictureUrl(participant, 'image');
       } catch (e) {
       }
 
@@ -2499,7 +2474,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
       };
 
       try {
-        await nazu.sendMessage(fromGroup, clone);
+        await chimu.sendMessage(fromGroup, clone);
       } catch (err) {
         console.error('ERRO CRÍTICO AO REENVIAR MENSAGEM:', err);
       }
@@ -2561,13 +2536,13 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     }
     if (isGroup && isMuted && !isGroupAdmin && !isOwner) {
       try {
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           text: `🤫 *Usuário mutado detectado*\n\n@${getUserName(sender)}, você está tentando falar enquanto está mutado neste grupo. Você será removido conforme as regras.`,
           mentions: [sender]
         }, {
           quoted: info
         });
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           delete: {
             remoteJid: from,
             fromMe: false,
@@ -2576,7 +2551,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
           }
         });
         if (isBotAdmin) {
-          await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+          await chimu.groupParticipantsUpdate(from, [sender], 'remove');
         } else {
           await reply("⚠️ Não posso remover o usuário porque não sou administrador.");
         }
@@ -2593,7 +2568,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
     }
     if (isGroup && isMuted2 && !isGroupAdmin && !isOwner) {
       try {
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           delete: {
             remoteJid: from,
             fromMe: false,
@@ -2691,7 +2666,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
         userData.lastMessage = Date.now();
 
         // Verifica level up e salva
-        checkLevelUp(sender, userData, levelingData, nazu, from);
+        checkLevelUp(sender, userData, levelingData, chimu, from);
         saveLevelingSafe(levelingData);
       } catch (levelingError) {
         console.error('❌ Erro no sistema de leveling:', levelingError.message);
@@ -2723,14 +2698,14 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
         if (!noQuote) {
           sendOptions.quoted = info;
         }
-        const result = await nazu.sendMessage(from, messageContent, sendOptions);
+        const result = await chimu.sendMessage(from, messageContent, sendOptions);
         return result;
       } catch (error) {
         console.error("Erro ao enviar mensagem:", error);
         return null;
       }
     }
-    nazu.reply = reply;
+    chimu.reply = reply;
     const reagir = async (emj, options = {}) => {
       try {
         const messageKey = options.key || info.key;
@@ -2744,7 +2719,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
             console.warn("Emoji inválido para reação:", emj);
             return false;
           }
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             react: {
               text: emj,
               key: messageKey
@@ -2757,7 +2732,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
               console.warn("Emoji inválido na sequência:", emoji);
               continue;
             }
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               react: {
                 text: emoji,
                 key: messageKey
@@ -2775,7 +2750,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
         return false;
       }
     };
-    nazu.react = reagir;
+    chimu.react = reagir;
 
 
     async function processReactionMessage() {
@@ -2840,7 +2815,7 @@ async function NazuninhaBotExec(nazu, info, store, messagesCache, rentalExpirati
                 const confirmationText = isGoingEmoji(emoji)
                   ? `🙋 Presença confirmada no rolê *${roleData.title || roleCode}*.`
                   : `🤷 Você sinalizou que não vai mais no rolê *${roleData.title || roleCode}*.`;
-                await nazu.sendMessage(actorId, {
+                await chimu.sendMessage(actorId, {
                   text: `${confirmationText}
 Código: *${roleCode}*`,
                   mentions: [actorId]
@@ -3074,7 +3049,7 @@ Código: *${roleCode}*`,
     };
 
     let remindersWorkerStarted = global.remindersWorkerStarted || false;
-    const startRemindersWorker = (nazuInstance) => {
+    const startRemindersWorker = (chimuInstance) => {
       try {
         if (remindersWorkerStarted) return;
         remindersWorkerStarted = true;
@@ -3097,10 +3072,10 @@ Código: *${roleCode}*`,
                 const textMsg = `⏰ Lembrete${r.createdByName ? ` de ${r.createdByName}` : ''}: ${r.message}`;
                 try {
                   if (r.chatId && String(r.chatId).endsWith('@g.us')) {
-                    await nazuInstance.sendMessage(r.chatId, { text: textMsg, mentions: r.userId ? [r.userId] : [] });
+                    await chimuInstance.sendMessage(r.chatId, { text: textMsg, mentions: r.userId ? [r.userId] : [] });
                   } else {
                     const dest = r.chatId || r.userId;
-                    if (dest) await nazuInstance.sendMessage(dest, { text: textMsg });
+                    if (dest) await chimuInstance.sendMessage(dest, { text: textMsg });
                   }
                   r.status = 'sent';
                   r.sentAt = new Date().toISOString();
@@ -3122,7 +3097,7 @@ Código: *${roleCode}*`,
       } catch (e) {
       }
     };
-    startRemindersWorker(nazu);
+    startRemindersWorker(chimu);
     // GP schedule using cron jobs (daily execution)
     let gpScheduleWorkerStarted = global.gpScheduleWorkerStarted || false;
     const gpCronJobs = {}; // key: `${groupId}:${type}` where type is 'open'|'close'
@@ -3136,7 +3111,7 @@ Código: *${roleCode}*`,
       delete gpCronJobs[key];
     };
 
-    const scheduleGroupJob = (groupId, type, timeStr, nazuInstance) => {
+    const scheduleGroupJob = (groupId, type, timeStr, chimuInstance) => {
       if (!groupId || !timeStr) return;
       const normalized = normalizeScheduleTime(timeStr);
       if (!normalized) return;
@@ -3159,16 +3134,16 @@ Código: *${roleCode}*`,
 
             if (type === 'open') {
               try {
-                await nazuInstance.groupSettingUpdate(groupId, 'not_announcement');
-                await nazuInstance.sendMessage(groupId, { text: '🔓 Grupo aberto automaticamente pelo agendamento diário.' });
+                await chimuInstance.groupSettingUpdate(groupId, 'not_announcement');
+                await chimuInstance.sendMessage(groupId, { text: '🔓 Grupo aberto automaticamente pelo agendamento diário.' });
                 console.log(`[Cron] ✅ Grupo ABERTO automaticamente: ${groupId.substring(0, 15)}... às ${normalized}`);
               } catch (e) {
                 console.error(`[Cron Error] open ${groupId}:`, e);
               }
             } else {
               try {
-                await nazuInstance.groupSettingUpdate(groupId, 'announcement');
-                await nazuInstance.sendMessage(groupId, { text: '🔒 Grupo fechado automaticamente pelo agendamento diário.' });
+                await chimuInstance.groupSettingUpdate(groupId, 'announcement');
+                await chimuInstance.sendMessage(groupId, { text: '🔒 Grupo fechado automaticamente pelo agendamento diário.' });
                 console.log(`[Cron] ✅ Grupo FECHADO automaticamente: ${groupId.substring(0, 15)}... às ${normalized}`);
               } catch (e) {
                 console.error(`[Cron Error] close ${groupId}:`, e);
@@ -3190,7 +3165,7 @@ Código: *${roleCode}*`,
       }
     };
 
-    const loadAllGroupSchedules = (nazuInstance) => {
+    const loadAllGroupSchedules = (chimuInstance) => {
       try {
         if (!ensureDirectoryExists(GRUPOS_DIR)) return;
         const files = fs.readdirSync(GRUPOS_DIR).filter(f => f.endsWith('.json'));
@@ -3203,12 +3178,12 @@ Código: *${roleCode}*`,
           try { data = JSON.parse(fs.readFileSync(filePath, 'utf8')) || {}; } catch (e) { continue; }
           const schedule = data.schedule && typeof data.schedule === 'object' ? data.schedule : {};
           if (schedule.openTime) {
-            scheduleGroupJob(groupId, 'open', schedule.openTime, nazuInstance);
+            scheduleGroupJob(groupId, 'open', schedule.openTime, chimuInstance);
             console.log(`[Cron] ✅ Agendamento ABRIR carregado: Grupo ${groupId.substring(0, 15)}... às ${schedule.openTime}`);
             loadedCount++;
           }
           if (schedule.closeTime) {
-            scheduleGroupJob(groupId, 'close', schedule.closeTime, nazuInstance);
+            scheduleGroupJob(groupId, 'close', schedule.closeTime, chimuInstance);
             console.log(`[Cron] ✅ Agendamento FECHAR carregado: Grupo ${groupId.substring(0, 15)}... às ${schedule.closeTime}`);
             loadedCount++;
           }
@@ -3221,21 +3196,21 @@ Código: *${roleCode}*`,
       }
     };
 
-    const startGpScheduleWorker = (nazuInstance) => {
+    const startGpScheduleWorker = (chimuInstance) => {
       try {
         if (gpScheduleWorkerStarted) return;
         gpScheduleWorkerStarted = true;
         global.gpScheduleWorkerStarted = true;
         // load existing schedules and create cron jobs
-        loadAllGroupSchedules(nazuInstance);
+        loadAllGroupSchedules(chimuInstance);
       } catch (e) {
         console.error('[Cron] startGpScheduleWorker error:', e);
       }
     };
-    startGpScheduleWorker(nazu);
+    startGpScheduleWorker(chimu);
 
     let autoHorariosWorkerStarted = global.autoHorariosWorkerStarted || false;
-    const startAutoHorariosWorker = (nazuInstance) => {
+    const startAutoHorariosWorker = (chimuInstance) => {
       try {
         if (autoHorariosWorkerStarted) return;
         autoHorariosWorkerStarted = true;
@@ -3331,7 +3306,7 @@ Código: *${roleCode}*`,
                 responseText += `┃     *CONSCIENTEMENTE!* 🍀  ┃\n`;
                 responseText += `┗━━━━━━━━━━━━━━━━━━━━━━━━┛`;
 
-                await nazuInstance.sendMessage(chatId, { text: responseText });
+                await chimuInstance.sendMessage(chatId, { text: responseText });
 
                 config.lastSent = Date.now();
 
@@ -3355,7 +3330,7 @@ Código: *${roleCode}*`,
         console.error('Erro ao iniciar auto horários worker:', e);
       }
     };
-    startAutoHorariosWorker(nazu);
+    startAutoHorariosWorker(chimu);
 
     // Auto Mensagens Worker usando cron jobs (executa conforme horários programados)
     let autoMensagensWorkerStarted = global.autoMensagensWorkerStarted || false;
@@ -3371,7 +3346,7 @@ Código: *${roleCode}*`,
       delete autoMsgCronJobs[key];
     };
 
-    const scheduleAutoMessage = (groupId, msgConfig, nazuInstance) => {
+    const scheduleAutoMessage = (groupId, msgConfig, chimuInstance) => {
       if (!groupId || !msgConfig || !msgConfig.id || !msgConfig.time) return;
 
       const normalized = normalizeScheduleTime(msgConfig.time);
@@ -3440,7 +3415,7 @@ Código: *${roleCode}*`,
               messageContent.mimetype = 'audio/mp4';
             }
 
-            await nazuInstance.sendMessage(groupId, messageContent);
+            await chimuInstance.sendMessage(groupId, messageContent);
             console.log(`[AutoMsg] ✅ Mensagem enviada automaticamente: Grupo ${groupId.substring(0, 15)}... ID ${msgConfig.id} às ${normalized}`);
 
           } catch (e) {
@@ -3460,7 +3435,7 @@ Código: *${roleCode}*`,
       }
     };
 
-    const loadAllAutoMessages = (nazuInstance) => {
+    const loadAllAutoMessages = (chimuInstance) => {
       try {
         if (!ensureDirectoryExists(GRUPOS_DIR)) return;
         const files = fs.readdirSync(GRUPOS_DIR).filter(f => f.endsWith('.json'));
@@ -3478,7 +3453,7 @@ Código: *${roleCode}*`,
 
           for (const msgConfig of autoMessages) {
             if (msgConfig.enabled && msgConfig.time) {
-              scheduleAutoMessage(groupId, msgConfig, nazuInstance);
+              scheduleAutoMessage(groupId, msgConfig, chimuInstance);
               console.log(`[AutoMsg] ✅ Mensagem agendada: Grupo ${groupId.substring(0, 15)}... ID ${msgConfig.id} às ${msgConfig.time}`);
               loadedCount++;
             }
@@ -3493,20 +3468,20 @@ Código: *${roleCode}*`,
       }
     };
 
-    const startAutoMensagensWorker = (nazuInstance) => {
+    const startAutoMensagensWorker = (chimuInstance) => {
       try {
         if (autoMensagensWorkerStarted) return;
         autoMensagensWorkerStarted = true;
         global.autoMensagensWorkerStarted = true;
 
         // Carregar mensagens existentes e criar cron jobs
-        loadAllAutoMessages(nazuInstance);
+        loadAllAutoMessages(chimuInstance);
 
         // Recarregar periodicamente para garantir que os agendamentos permaneçam ativos
         if (!global.autoMensagensRefreshTimer) {
           global.autoMensagensRefreshTimer = setInterval(() => {
             try {
-              loadAllAutoMessages(nazuInstance);
+              loadAllAutoMessages(chimuInstance);
             } catch (e) {
               console.error('[AutoMsg] refresh error:', e);
             }
@@ -3517,7 +3492,7 @@ Código: *${roleCode}*`,
       }
     };
 
-    startAutoMensagensWorker(nazu);
+    startAutoMensagensWorker(chimu);
 
     // ============== DIVULGAÇÃO DO DONO (NOVO SISTEMA) ==============
     let donoDivulgacaoWorkerStarted = global.donoDivulgacaoWorkerStarted || false;
@@ -3531,7 +3506,7 @@ Código: *${roleCode}*`,
       global.donoDivulgacaoCronJob = null;
     };
 
-    const runDonoDivulgacaoSend = async (nazuInstance, messageText, source = 'manual') => {
+    const runDonoDivulgacaoSend = async (chimuInstance, messageText, source = 'manual') => {
       const config = loadDonoDivulgacao();
       const groups = Array.isArray(config.groups) ? config.groups : [];
       const text = (messageText || config.message || '').trim();
@@ -3552,7 +3527,7 @@ Código: *${roleCode}*`,
           continue;
         }
         try {
-          await nazuInstance.sendMessage(groupId, { text });
+          await chimuInstance.sendMessage(groupId, { text });
           sent++;
         } catch (e) {
           failed++;
@@ -3572,7 +3547,7 @@ Código: *${roleCode}*`,
       return { success: true, sent, failed };
     };
 
-    const scheduleDonoDivulgacaoJob = (timeStr, nazuInstance) => {
+    const scheduleDonoDivulgacaoJob = (timeStr, chimuInstance) => {
       const normalized = normalizeScheduleTime(timeStr);
       if (!normalized) return false;
       const [hh, mm] = normalized.split(':');
@@ -3594,7 +3569,7 @@ Código: *${roleCode}*`,
             const today = getTodayStr();
             if (hasRunForScheduleToday(schedule.lastRun, today, targetTime)) return;
 
-            const result = await runDonoDivulgacaoSend(nazuInstance, null, 'auto');
+            const result = await runDonoDivulgacaoSend(chimuInstance, null, 'auto');
             if (result.success) {
               schedule.lastRun = { date: today, time: targetTime };
               config.schedule = schedule;
@@ -3615,7 +3590,7 @@ Código: *${roleCode}*`,
       }
     };
 
-    const startDonoDivulgacaoWorker = (nazuInstance) => {
+    const startDonoDivulgacaoWorker = (chimuInstance) => {
       try {
         if (donoDivulgacaoWorkerStarted) return;
         donoDivulgacaoWorkerStarted = true;
@@ -3623,29 +3598,29 @@ Código: *${roleCode}*`,
 
         const config = loadDonoDivulgacao();
         if (config.schedule?.enabled && config.schedule?.time) {
-          scheduleDonoDivulgacaoJob(config.schedule.time, nazuInstance);
+          scheduleDonoDivulgacaoJob(config.schedule.time, chimuInstance);
         }
       } catch (e) {
         console.error('[DivDono] Erro ao iniciar worker:', e);
       }
     };
 
-    startDonoDivulgacaoWorker(nazu);
+    startDonoDivulgacaoWorker(chimu);
 
-    const getFileBuffer = async (mediakey, mediaType, options = {}) => {
-      try {
+const getFileBuffer = async (mediakey, mediaType, options = {}) => {
+    try {
         if (!mediakey) {
-          throw new Error('Chave de mídia inválida');
+            throw new Error('Chave de mídia inválida');
         }
 
         // Corrige os tipos aceitos pelo Baileys
         const typeMap = {
-          sticker: 'image',
-          stickerMessage: 'image',
-          imageMessage: 'image',
-          videoMessage: 'video',
-          audioMessage: 'audio',
-          documentMessage: 'document'
+            sticker: 'image',
+            stickerMessage: 'image',
+            imageMessage: 'image',
+            videoMessage: 'video',
+            audioMessage: 'audio',
+            documentMessage: 'document'
         };
 
         const downloadType = typeMap[mediaType] || mediaType;
@@ -3654,21 +3629,21 @@ Código: *${roleCode}*`,
         console.log("[BUFFER] Tipo usado no download:", downloadType);
 
         const stream = await downloadContentFromMessage(
-          mediakey,
-          downloadType
+            mediakey,
+            downloadType
         );
 
         const chunks = [];
         let totalSize = 0;
-        const MAX_BUFFER_SIZE = 50 * 1024 * 1024;
+        const MAX_BUFFER_SIZE = 1024 * 1024 * 1024;
 
         for await (const chunk of stream) {
-          chunks.push(chunk);
-          totalSize += chunk.length;
+            chunks.push(chunk);
+            totalSize += chunk.length;
 
-          if (totalSize > MAX_BUFFER_SIZE) {
-            throw new Error(`Tamanho máximo excedido (${MAX_BUFFER_SIZE / 1024 / 1024}MB)`);
-          }
+            if (totalSize > MAX_BUFFER_SIZE) {
+                throw new Error(`Tamanho máximo excedido (${MAX_BUFFER_SIZE / 1024 / 1024}MB)`);
+            }
         }
 
         const buffer = Buffer.concat(chunks);
@@ -3678,11 +3653,11 @@ Código: *${roleCode}*`,
 
         return buffer;
 
-      } catch (err) {
+    } catch (err) {
         console.error("[BUFFER] Erro:", err);
         throw err;
-      }
-    };
+    }
+};
     const getMediaInfo = message => {
       if (!message) return null;
       if (message.imageMessage) return {
@@ -3817,7 +3792,7 @@ Código: *${roleCode}*`,
                 pornGroupData.warnings = pornGroupData.warnings || {};
 
                 try {
-                  await nazu.sendMessage(from, { delete: info.key });
+                  await chimu.sendMessage(from, { delete: info.key });
                 } catch { }
 
                 if (pornGroupData.modoADV) {
@@ -3831,7 +3806,7 @@ Código: *${roleCode}*`,
                   fs.writeFileSync(pornGroupFilePath, JSON.stringify(pornGroupData, null, 2));
                   if (warningCount >= 3) {
                     if (isBotAdmin) {
-                      await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+                      await chimu.groupParticipantsUpdate(from, [sender], 'remove');
                       delete pornGroupData.warnings[sender];
                       fs.writeFileSync(pornGroupFilePath, JSON.stringify(pornGroupData, null, 2));
                       await reply(`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar conteúdo impróprio e foi removido.`, { mentions: [sender] });
@@ -3844,7 +3819,7 @@ Código: *${roleCode}*`,
                 } else {
                   if (isBotAdmin) {
                     try {
-                      await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+                      await chimu.groupParticipantsUpdate(from, [sender], 'remove');
                       await reply(`🔞 @${getUserName(sender)}, conteúdo impróprio detectado. Você foi removido do grupo.`, { mentions: [sender] });
                     } catch (adminError) {
                       console.error(`Erro ao remover usuário por anti-porn: ${adminError}`);
@@ -3871,7 +3846,7 @@ Código: *${roleCode}*`,
         locGroupData.warnings = locGroupData.warnings || {};
 
         try {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             delete: {
               remoteJid: from,
               fromMe: false,
@@ -3892,7 +3867,7 @@ Código: *${roleCode}*`,
           fs.writeFileSync(locGroupFilePath, JSON.stringify(locGroupData, null, 2));
           if (warningCount >= 3) {
             if (isBotAdmin) {
-              await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+              await chimu.groupParticipantsUpdate(from, [sender], 'remove');
               delete locGroupData.warnings[sender];
               fs.writeFileSync(locGroupFilePath, JSON.stringify(locGroupData, null, 2));
               await reply(`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar localização e foi removido.`, { mentions: [sender] });
@@ -3903,7 +3878,7 @@ Código: *${roleCode}*`,
             await reply(`⚠️ @${getUserName(sender)} recebeu uma advertência por enviar localização.\n\n📊 Advertências: *${warningCount}/3*\n🚫 Ao atingir *3/3* será removido automaticamente.`, { mentions: [sender] });
           }
         } else {
-          await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+          await chimu.groupParticipantsUpdate(from, [sender], 'remove');
           await reply(`🗺️ @${getUserName(sender)}, localização não permitida. Você foi removido do grupo.`, { mentions: [sender] });
         }
       }
@@ -3929,7 +3904,7 @@ Código: *${roleCode}*`,
         docGroupData.warnings = docGroupData.warnings || {};
 
         try {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             delete: {
               remoteJid: from,
               fromMe: false,
@@ -3950,7 +3925,7 @@ Código: *${roleCode}*`,
           fs.writeFileSync(docGroupFilePath, JSON.stringify(docGroupData, null, 2));
           if (warningCount >= 3) {
             if (isBotAdmin) {
-              await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+              await chimu.groupParticipantsUpdate(from, [sender], 'remove');
               delete docGroupData.warnings[sender];
               fs.writeFileSync(docGroupFilePath, JSON.stringify(docGroupData, null, 2));
               await reply(`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar documentos e foi removido.`, { mentions: [sender] });
@@ -3961,7 +3936,7 @@ Código: *${roleCode}*`,
             await reply(`⚠️ @${getUserName(sender)} recebeu uma advertência por enviar documento.\n\n📊 Advertências: *${warningCount}/3*\n🚫 Ao atingir *3/3* será removido automaticamente.`, { mentions: [sender] });
           }
         } else {
-          await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+          await chimu.groupParticipantsUpdate(from, [sender], 'remove');
           await reply(`📄 @${getUserName(sender)}, documentos não são permitidos. Você foi removido do grupo.`, { mentions: [sender] });
         }
       }
@@ -3972,7 +3947,7 @@ Código: *${roleCode}*`,
       if (urlMatch && urlMatch.length > 0) {
         // Processa apenas o primeiro link encontrado
         try {
-          handleAutoDownload(nazu, from, urlMatch[0], info)
+          handleAutoDownload(chimu, from, urlMatch[0], info)
             .then(() => null)
             .catch((e) => {
               console.error('Erro no autodl:', e);
@@ -3993,7 +3968,7 @@ Código: *${roleCode}*`,
           }
           const buffer = await getFileBuffer(isVideo ? mediaVideo : mediaImage, isVideo ? 'video' : 'image');
           const shouldForceSquare = global.autoStickerMode === 'square';
-          await sendSticker(nazu, from, {
+          await sendSticker(chimu, from, {
             sticker: buffer,
             author: `『${pushname}』`,
             packname: `${nomebot}`, type: isVideo ? 'video' : 'image',
@@ -4155,7 +4130,7 @@ Código: *${roleCode}*`,
             foundGroupLink = true;
 
             link_dgp =
-              await nazu.groupInviteCode(
+              await chimu.groupInviteCode(
                 from
               );
 
@@ -4191,7 +4166,7 @@ Código: *${roleCode}*`,
 
               link_dgp =
                 link_dgp ||
-                await nazu.groupInviteCode(
+                await chimu.groupInviteCode(
                   from
                 );
 
@@ -4221,7 +4196,7 @@ Código: *${roleCode}*`,
             // apagar mensagem
             try {
 
-              await nazu.sendMessage(
+              await chimu.sendMessage(
                 from,
                 {
                   delete: {
@@ -4277,7 +4252,7 @@ Código: *${roleCode}*`,
                   isBotAdmin
                 ) {
 
-                  await nazu.groupParticipantsUpdate(
+                  await chimu.groupParticipantsUpdate(
                     from,
                     [sender],
                     'remove'
@@ -4341,7 +4316,7 @@ Código: *${roleCode}*`,
               isBotAdmin
             ) {
 
-              await nazu.groupParticipantsUpdate(
+              await chimu.groupParticipantsUpdate(
                 from,
                 [sender],
                 'remove'
@@ -4406,7 +4381,7 @@ Código: *${roleCode}*`,
             canalGroupData.warnings = canalGroupData.warnings || {};
 
             try {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 delete: {
                   remoteJid: from,
                   fromMe: false,
@@ -4427,7 +4402,7 @@ Código: *${roleCode}*`,
               fs.writeFileSync(canalGroupFilePath, JSON.stringify(canalGroupData, null, 2));
               if (warningCount >= 3) {
                 if (isBotAdmin) {
-                  await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+                  await chimu.groupParticipantsUpdate(from, [sender], 'remove');
                   delete canalGroupData.warnings[sender];
                   fs.writeFileSync(canalGroupFilePath, JSON.stringify(canalGroupData, null, 2));
                   await reply(`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar links de canais e foi removido.`, { mentions: [sender] });
@@ -4441,7 +4416,7 @@ Código: *${roleCode}*`,
             }
 
             if (isBotAdmin) {
-              await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+              await chimu.groupParticipantsUpdate(from, [sender], 'remove');
               await reply(`📢 @${getUserName(sender)}, links de canais não são permitidos. Você foi removido do grupo.`, { mentions: [sender] });
             } else {
               await reply(`📢 Atenção, @${getUserName(sender)}! Links de canais não são permitidos. Não consigo remover você, mas evite compartilhar esses links.`, { mentions: [sender] });
@@ -4456,7 +4431,7 @@ Código: *${roleCode}*`,
     if (isGroup && isAntiLinkSoft && !isGroupAdmin && !isParceiro && budy2.includes('http') && !isOwner) {
       if (!isUserWhitelisted(sender, 'antilinksoft')) {
         try {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             delete: {
               remoteJid: from,
               fromMe: false,
@@ -4478,7 +4453,7 @@ Código: *${roleCode}*`,
             fs.writeFileSync(softGroupFilePath, JSON.stringify(groupData, null, 2));
             if (warningCount >= 3) {
               if (isBotAdmin) {
-                await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+                await chimu.groupParticipantsUpdate(from, [sender], 'remove');
                 delete groupData.warnings[sender];
                 fs.writeFileSync(softGroupFilePath, JSON.stringify(groupData, null, 2));
                 await reply(`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar links e foi removido.`, { mentions: [sender] });
@@ -4508,7 +4483,7 @@ Código: *${roleCode}*`,
           hardGroupData.warnings = hardGroupData.warnings || {};
 
           try {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               delete: {
                 remoteJid: from,
                 fromMe: false,
@@ -4529,7 +4504,7 @@ Código: *${roleCode}*`,
             fs.writeFileSync(hardGroupFilePath, JSON.stringify(hardGroupData, null, 2));
             if (warningCount >= 3) {
               if (isBotAdmin) {
-                await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+                await chimu.groupParticipantsUpdate(from, [sender], 'remove');
                 delete hardGroupData.warnings[sender];
                 fs.writeFileSync(hardGroupFilePath, JSON.stringify(hardGroupData, null, 2));
                 await reply(`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar links e foi removido.`, { mentions: [sender] });
@@ -4543,7 +4518,7 @@ Código: *${roleCode}*`,
           }
 
           if (isBotAdmin) {
-            await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+            await chimu.groupParticipantsUpdate(from, [sender], 'remove');
             await reply(`🔗 @${getUserName(sender)}, links não são permitidos. Você foi removido do grupo.`, { mentions: [sender] });
           } else {
             await reply(`🔗 Atenção, @${getUserName(sender)}! Links não são permitidos. Não consigo remover você, mas evite enviar links.`, { mentions: [sender] });
@@ -4572,7 +4547,7 @@ Código: *${roleCode}*`,
 
           if (groupData.antistickerplus_apagar || groupData.antistickerplus_remover) {
             try {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 delete: {
                   remoteJid: from,
                   fromMe: false,
@@ -4599,7 +4574,7 @@ Código: *${roleCode}*`,
               fs.writeFileSync(spGroupFilePath, JSON.stringify(spGroupData, null, 2));
               if (warningCount >= 3) {
                 if (isBotAdmin) {
-                  await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+                  await chimu.groupParticipantsUpdate(from, [sender], 'remove');
                   delete spGroupData.warnings[sender];
                   fs.writeFileSync(spGroupFilePath, JSON.stringify(spGroupData, null, 2));
                   await reply(`🚫 @${getUserName(sender)} atingiu *3/3 advertências* por enviar figurinhas plus e foi removido.`, { mentions: [sender] });
@@ -4615,7 +4590,7 @@ Código: *${roleCode}*`,
                 { mentions: [sender] }
               );
               if (isBotAdmin) {
-                await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+                await chimu.groupParticipantsUpdate(from, [sender], 'remove');
               }
             }
           }
@@ -4628,35 +4603,43 @@ Código: *${roleCode}*`,
     }
 
     const botStateFile = pathz.join(DATABASE_DIR, 'botState.json');
-    if (botState.status === 'off' && !isOwner) return;
-    if (botState.viewMessages) nazu.readMessages([info.key]);
-    try {
-      if (budy2 && budy2.length > 1) {
-        const timestamp = new Date().toLocaleTimeString('pt-BR', {
-          hour12: false,
-          timeZone: 'America/Sao_Paulo'
-        });
-        const messageType = isCmd ? 'COMANDO' : 'MENSAGEM';
-        const context = isGroup ? 'GRUPO' : 'PRIVADO';
-        const messagePreview = isCmd ? `${prefix}${command}${q ? ` ${q.substring(0, 25)}${q.length > 25 ? '...' : ''}` : ''}` : budy2.substring(0, 35) + (budy2.length > 35 ? '...' : '');
-        console.log('┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓');
-        console.log(`┃ ${messageType} [${context}]${' '.repeat(36 - messageType.length - context.length)}`);
-        console.log('┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫');
-        console.log(`┃ 📜 Conteúdo: ${messagePreview.padEnd(28)}`);
-        if (isGroup) {
-          console.log(`┃ 👥 Grupo: ${(groupName || 'Desconhecido').padEnd(28)}`);
-          console.log(`┃ 👤 Usuário: ${(pushname || 'Sem Nome').padEnd(28)}`);
-        } else {
-          console.log(`┃ 👤 Usuário: ${(pushname || 'Sem Nome').padEnd(28)}`);
-          console.log(`┃ 📱 Número: ${getUserName(sender).padEnd(28)}`);
-        }
-        console.log('┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫');
-        console.log(`┃ 🕒 Data/Hora: ${timestamp.padEnd(27)}`);
-        console.log('┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n');
-      }
-    } catch (error) {
-      console.error('┃ 🚨 Erro ao gerar logs:', error, '');
+if (botState.status === 'off' && !isOwner) return;
+if (botState.viewMessages) chimu.readMessages([info.key]);
+try {
+  if (budy2 && budy2.length > 1) {
+    // Formata tanto a Data quanto a Hora no padrão PT-BR
+    const fullDateTime = new Date().toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).replace(',', ' ás');
+
+    const messageType = isCmd ? 'COMANDO' : 'MENSAGEM';
+    const context = isGroup ? 'GRUPO' : 'PRIVADO';
+    const messagePreview = isCmd ? `${prefix}${command}${q ? ` ${q}` : ''}` : budy2;
+    console.log('┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓');
+    console.log(`┃ ${messageType} [${context}]${' '.repeat(Math.max(0, 26 - messageType.length - context.length))}`);
+    console.log('┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫');
+    console.log(`┃ 📜 Conteúdo: ${messagePreview.padEnd(28)}`);
+    if (isGroup) {
+      console.log(`┃ 👥 Grupo: ${(groupName || 'Desconhecido').padEnd(28)}`);
+      console.log(`┃ 👤 Usuário: ${(pushname || 'Sem Nome').padEnd(28)}`);
+    } else {
+      console.log(`┃ 👤 Usuário: ${(pushname || 'Sem Nome').padEnd(28)}`);
+      console.log(`┃ 📱 Número: ${getUserName(sender).padEnd(28)}`);
     }
+    console.log('┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫');
+    console.log(`┃ 🕒 ${fullDateTime.padEnd(25)}`);
+    console.log('┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n');
+  }
+} catch (error) {
+  console.error('┃ 🚨 Erro ao gerar logs:', error, '');
+}
 
 
     if (isGroup) {
@@ -4667,7 +4650,7 @@ Código: *${roleCode}*`,
               const relResponse = relationshipManager.processResponse(from, sender, body);
               if (relResponse) {
                 if (relResponse.success && relResponse.message) {
-                  await nazu.sendMessage(from, {
+                  await chimu.sendMessage(from, {
                     text: relResponse.message,
                     mentions: relResponse.mentions || []
                   });
@@ -4680,7 +4663,7 @@ Código: *${roleCode}*`,
                 const betrayalResponse = relationshipManager.processBetrayalResponse(from, sender, body, groupPrefix);
                 if (betrayalResponse) {
                   if (betrayalResponse.success && betrayalResponse.message) {
-                    await nazu.sendMessage(from, {
+                    await chimu.sendMessage(from, {
                       text: betrayalResponse.message,
                       mentions: betrayalResponse.mentions || []
                     });
@@ -4697,7 +4680,7 @@ Código: *${roleCode}*`,
           const normalizedResponse = budy2.toLowerCase().trim();
           const result = tictactoe.processInvitationResponse(from, sender, normalizedResponse);
           if (result.success) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: result.message,
               mentions: result.mentions || []
             });
@@ -4717,7 +4700,7 @@ Código: *${roleCode}*`,
           if (!isNaN(position)) {
             const result = tictactoe.makeMove(from, sender, position);
             if (result.success) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 text: result.message,
                 mentions: result.mentions || [sender]
               });
@@ -4732,7 +4715,7 @@ Código: *${roleCode}*`,
           const normalizedResponse = budy2.toLowerCase().trim();
           const result = connect4.processInvitationResponse(from, sender, normalizedResponse);
           if (result.success) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: result.message,
               mentions: result.mentions || []
             });
@@ -4752,7 +4735,7 @@ Código: *${roleCode}*`,
           if (!isNaN(column) && column >= 1 && column <= 7) {
             const result = connect4.makeMove(from, sender, column);
             if (result.success) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 text: result.message,
                 mentions: result.mentions || [sender]
               });
@@ -4762,9 +4745,10 @@ Código: *${roleCode}*`,
             return;
           }
         }
+
         if (antitoxic && antitoxic.isEnabled && antitoxic.isEnabled(from) && body && ia) {
           const aiFunction = (prompt) => {
-            return ia.makeCognimaRequest('meta/llama-3.3-70b-instruct', prompt, null)
+            return ia.makeCognimaRequest('qwen/qwen3-235b-a22b', prompt, null)
               .then(response => response?.data?.choices?.[0]?.message?.content || '');
           };
 
@@ -4772,14 +4756,14 @@ Código: *${roleCode}*`,
             if (toxicResult.isToxic) {
               const action = antitoxic.getGroupAction ? antitoxic.getGroupAction(from) : 'avisar';
               if (action === 'apagar') {
-                nazu.sendMessage(from, { delete: info.key }).then(() => {
-                  nazu.sendMessage(from, {
+                chimu.sendMessage(from, { delete: info.key }).then(() => {
+                  chimu.sendMessage(from, {
                     text: `⚠️ @${sender.split('@')[0]}, sua mensagem foi removida por conteúdo tóxico.\n\n_Este sistema usa IA e pode cometer erros._`,
                     mentions: [sender]
                   });
                 });
               } else if (action === 'avisar') {
-                nazu.sendMessage(from, {
+                chimu.sendMessage(from, {
                   text: `⚠️ @${sender.split('@')[0]}, evite mensagens tóxicas!\n\n_Este sistema usa IA e pode cometer erros._`,
                   mentions: [sender]
                 });
@@ -4789,8 +4773,6 @@ Código: *${roleCode}*`,
             console.warn('[ANTITOXIC] Error:', toxicErr.message);
           });
         }
-
-
 
         if (isGroup && antipalavra && body && !isCmd) {
           try {
@@ -4802,7 +4784,7 @@ Código: *${roleCode}*`,
                 console.log(`[ANTIPALAVRA] Palavra detectada: "${detectionResult.palavra}" de @${sender.split('@')[0]}`);
 
                 if (!isBotAdmin) {
-                  await nazu.sendMessage(from, {
+                  await chimu.sendMessage(from, {
                     text: `⚠️ *ANTIPALAVRA - DETECÇÃO*\n\n` +
                       `👤 @${sender.split('@')[0]} usou uma palavra proibida!\n` +
                       `⚠️ Palavra: "${detectionResult.palavra}"\n\n` +
@@ -4812,17 +4794,17 @@ Código: *${roleCode}*`,
                   return;
                 }
 
-                await nazu.sendMessage(from, { delete: info.key }).catch(err =>
+                await chimu.sendMessage(from, { delete: info.key }).catch(err =>
                   console.error('[ANTIPALAVRA] Erro ao deletar mensagem:', err.message)
                 );
 
-                await nazu.groupParticipantsUpdate(from, [sender], 'remove').catch(err =>
+                await chimu.groupParticipantsUpdate(from, [sender], 'remove').catch(err =>
                   console.error('[ANTIPALAVRA] Erro ao remover usuário:', err.message)
                 );
 
                 antipalavra.registerBan(from, sender, detectionResult.palavra);
 
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   text: `🚫 *ANTIPALAVRA - BANIMENTO AUTOMÁTICO*\n\n` +
                     `👤 Usuário: @${sender.split('@')[0]}\n` +
                     `⚠️ Palavra detectada: "${detectionResult.palavra}"\n` +
@@ -4870,7 +4852,7 @@ Código: *${roleCode}*`,
 
 
 
-    const _botShort = (nazu && nazu.user && (nazu.user.id || nazu.user.lid)) ? String((nazu.user.id || nazu.user.lid).split(':')[0]) : '';
+    const _botShort = (chimu && chimu.user && (chimu.user.id || chimu.user.lid)) ? String((chimu.user.id || chimu.user.lid).split(':')[0]) : '';
     // Não processar pela assistente se a mensagem veio do PRO (evita loop infinito)
     if (!info.key.fromMe && isAssistente && !isCmd && !info._fromPro && ((_botShort && budy2.includes(_botShort)) || (menc_os2 && menc_os2 == botNumber))) {
       if (budy2.replaceAll('@' + _botShort, '').length > 2) {
@@ -4894,8 +4876,8 @@ Código: *${roleCode}*`,
         const mencoesNaMensagem = info.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
 
         // Obter todos os possíveis identificadores do bot para filtrar
-        const botLid = nazu.user?.lid ? nazu.user.lid.split(':')[0] : null;
-        const botJid = nazu.user?.id ? nazu.user.id.split(':')[0] : null;
+        const botLid = chimu.user?.lid ? chimu.user.lid.split(':')[0] : null;
+        const botJid = chimu.user?.id ? chimu.user.id.split(':')[0] : null;
         const botIdentifiers = [_botShort, botLid, botJid, botNumber].filter(Boolean);
 
 
@@ -4948,7 +4930,7 @@ Código: *${roleCode}*`,
           jSoNzIn.marcou_mensagem = true;
           jSoNzIn.mensagem_marcada = jsonO.texto;
           jSoNzIn.id_enviou_marcada = jsonO.participant;
-          jSoNzIn.marcou_sua_mensagem = jsonO.participant == getBotId(nazu);
+          jSoNzIn.marcou_sua_mensagem = jsonO.participant == getBotId(chimu);
         }
         // Se marcou mensagem com mídia mas sem texto, ainda assim é marcou_mensagem
         if (jsonO && jsonO.participant && tipoMidiaMarcada && !jSoNzIn.marcou_mensagem) {
@@ -4964,11 +4946,11 @@ Código: *${roleCode}*`,
         }
 
         // Obter a personalidade atual do grupo
-        const personality = groupData.assistentePersonality || 'nazuna';
+        const personality = groupData.assistentePersonality || 'TheChimasBot';
 
         // Verificar se é personalidade customizada
         let customPrompt = null;
-        if (!['nazuna', 'humana', 'ia', 'pro'].includes(personality)) {
+        if (!['TheChimasBot', 'humana', 'ia', 'pro'].includes(personality)) {
           try {
             const persFile = pathz.join(DATABASE_DIR, 'customPersonalidades.json');
             if (fs.existsSync(persFile)) {
@@ -4982,7 +4964,7 @@ Código: *${roleCode}*`,
 
         ia.makeAssistentRequest({
           mensagens: [jSoNzIn]
-        }, nazu, nmrdn, personality, customPrompt).then((respAssist) => {
+        }, chimu, nmrdn, personality, customPrompt).then((respAssist) => {
           if (respAssist.erro === 'Sistema de IA temporariamente desativado') {
             return;
           }
@@ -5006,8 +4988,8 @@ Código: *${roleCode}*`,
               const originalMentions = info.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
 
               // Usar os mesmos identificadores do bot para filtrar
-              const botLidPro = nazu.user?.lid ? nazu.user.lid.split(':')[0] : null;
-              const botJidPro = nazu.user?.id ? nazu.user.id.split(':')[0] : null;
+              const botLidPro = chimu.user?.lid ? chimu.user.lid.split(':')[0] : null;
+              const botJidPro = chimu.user?.id ? chimu.user.id.split(':')[0] : null;
               const botIdentifiersPro = [_botShort, botLidPro, botJidPro, botNumber].filter(Boolean);
 
               const mentionsWithoutBot = originalMentions.filter(m => {
@@ -5185,11 +5167,11 @@ Código: *${roleCode}*`,
                 hasQuotedImage ? '🖼️ (marcado)' : hasQuotedVideo ? '🎬 (marcado)' :
                   hasQuotedAudio ? '🎵 (marcado)' : hasQuotedSticker ? '🎭 (marcado)' : '';
 
-              nazu.sendMessage(from, {
+              chimu.sendMessage(from, {
                 text: `🤖 *Executando:* ${prefix}${simulatedCommand}${simulatedArgs ? ' ' + simulatedArgs : ''}${mediaInfo ? '\n📎 Mídia: ' + mediaInfo : ''}`
               }, { quoted: info }).then(() => {
                 // Emitir novamente o evento de mensagem com o objeto completo
-                nazu.ev.emit('messages.upsert', {
+                chimu.ev.emit('messages.upsert', {
                   messages: [fakeMessage],
                   type: 'notify'
                 });
@@ -5206,7 +5188,7 @@ Código: *${roleCode}*`,
               const processNext = () => processResponses(index + 1);
 
               if (msgza && msgza.react) {
-                nazu.react(msgza.react.replaceAll(' ', '').replaceAll('\n', ''), {
+                chimu.react(msgza.react.replaceAll(' ', '').replaceAll('\n', ''), {
                   key: info.key
                 }).then(() => {
                   if (msgza.resp && typeof msgza.resp === 'string' && msgza.resp.length > 0) {
@@ -5260,7 +5242,7 @@ Código: *${roleCode}*`,
         groupData.messageLimit.users[sender] = userData;
         if (userData.count > groupData.messageLimit.limit) {
           if (groupData.messageLimit.action === 'ban' && isBotAdmin) {
-            await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+            await chimu.groupParticipantsUpdate(from, [sender], 'remove');
             await reply(`🚨 @${getUserName(sender)} foi banido por exceder o limite de ${groupData.messageLimit.limit} mensagens em ${groupData.messageLimit.interval}s!`, {
               mentions: [sender]
             });
@@ -5269,7 +5251,7 @@ Código: *${roleCode}*`,
             groupData.messageLimit.warnings[sender] = (groupData.messageLimit.warnings[sender] || 0) + 1;
             const warnings = groupData.messageLimit.warnings[sender];
             if (warnings >= 3 && isBotAdmin) {
-              await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+              await chimu.groupParticipantsUpdate(from, [sender], 'remove');
               await reply(`🚨 @${getUserName(sender)} foi banido por exceder o limite de mensagens (${groupData.messageLimit.limit} em ${groupData.messageLimit.interval}s) 3 vezes!`, {
                 mentions: [sender]
               });
@@ -5299,7 +5281,7 @@ Código: *${roleCode}*`,
           partnerData.count++;
           saveParceriasData(from, parceriasData);
         } else {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             delete: info.key
           });
           await reply(`@${getUserName(sender)}, você atingiu o limite de ${partnerData.limit} links de grupos.`, {
@@ -5307,7 +5289,7 @@ Código: *${roleCode}*`,
           });
         }
       } else {
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           delete: info.key
         });
         await reply(`@${getUserName(sender)}, você não é um parceiro e não pode enviar links de grupos.`, {
@@ -5319,7 +5301,7 @@ Código: *${roleCode}*`,
     if (isGroup && groupData.antifig && groupData.antifig.enabled && type === "stickerMessage" && !isGroupAdmin && !info.key.fromMe) {
       if (!isUserWhitelisted(sender, 'antifig')) {
         try {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             delete: {
               remoteJid: from,
               fromMe: false,
@@ -5339,10 +5321,10 @@ Código: *${roleCode}*`,
           let warnMessage = `🚫 @${getUserName(sender)}, figurinhas não são permitidas neste grupo! Advertência ${warnCount}/${warnLimit}.`;
           if (warnCount >= warnLimit && isBotAdmin) {
             warnMessage += `\n⚠️ Você atingiu o limite de advertências e será removido.`;
-            await nazu.groupParticipantsUpdate(from, [sender], 'remove');
+            await chimu.groupParticipantsUpdate(from, [sender], 'remove');
             delete groupData.warnings[sender];
           }
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: warnMessage,
             mentions: [sender]
           });
@@ -5679,7 +5661,7 @@ Código: *${roleCode}*`,
               if (!mentionsToIncludeExec.length && typeof menc_os2 !== 'undefined' && menc_os2) {
                 mentionsToIncludeExec = [menc_os2];
               }
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 image: imageBuffer,
                 caption: processedResponse.caption || '',
                 mentions: mentionsToIncludeExec
@@ -5693,7 +5675,7 @@ Código: *${roleCode}*`,
               if (!mentionsToIncludeExec.length && typeof menc_os2 !== 'undefined' && menc_os2) {
                 mentionsToIncludeExec = [menc_os2];
               }
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 video: videoBuffer,
                 caption: processedResponse.caption || '',
                 mentions: mentionsToIncludeExec
@@ -5702,7 +5684,7 @@ Código: *${roleCode}*`,
           } else if (processedResponse.type === 'audio') {
             const audioBuffer = processedResponse.buffer ? Buffer.from(processedResponse.buffer, 'base64') : null;
             if (audioBuffer) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 audio: audioBuffer,
                 mimetype: 'audio/mp4',
                 ptt: processedResponse.ptt || false
@@ -5711,7 +5693,7 @@ Código: *${roleCode}*`,
           } else if (processedResponse.type === 'sticker') {
             const stickerBuffer = processedResponse.buffer ? Buffer.from(processedResponse.buffer, 'base64') : null;
             if (stickerBuffer) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 sticker: stickerBuffer
               }, { quoted: info });
             }
@@ -5798,7 +5780,7 @@ Entre em contato com o dono do bot:
           const listText = `🪩 *Rolês ativos*\n\n${listLines.join('\n\n')}\n\n🙋 Reaja com ${ROLE_GOING_BASE} ou use ${groupPrefix}role.vou CODIGO\n🤷 Reaja com ${ROLE_NOT_GOING_BASE} ou use ${groupPrefix}role.nvou CODIGO`;
 
           try {
-            await nazu.sendMessage(sendTarget, { text: listText });
+            await chimu.sendMessage(sendTarget, { text: listText });
             if (sendInPv && sendTarget !== from) {
               await reply('📬 Enviei a lista de rolês no seu privado!', { mentions: [sender] });
             }
@@ -5901,9 +5883,9 @@ Entre em contato com o dono do bot:
                   payload.gifPlayback = true;
                 }
               }
-              sentMessage = await nazu.sendMessage(from, payload);
+              sentMessage = await chimu.sendMessage(from, payload);
             } else {
-              sentMessage = await nazu.sendMessage(from, { text: announcementText });
+              sentMessage = await chimu.sendMessage(from, { text: announcementText });
             }
           } catch (sendError) {
             console.error('Erro ao divulgar rolê:', sendError);
@@ -5985,7 +5967,7 @@ Entre em contato com o dono do bot:
           if (roleData.announcementKey?.id) {
             delete groupData.roleMessages[roleData.announcementKey.id];
             try {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 delete: {
                   remoteJid: from,
                   fromMe: roleData.announcementKey.fromMe !== undefined ? roleData.announcementKey.fromMe : true,
@@ -6028,9 +6010,9 @@ Entre em contato com o dono do bot:
                   payload.gifPlayback = true;
                 }
               }
-              sentMessage = await nazu.sendMessage(from, payload);
+              sentMessage = await chimu.sendMessage(from, payload);
             } else {
-              sentMessage = await nazu.sendMessage(from, { text: announcementText });
+              sentMessage = await chimu.sendMessage(from, { text: announcementText });
             }
           } catch (updateErr) {
             console.error('Erro ao reenviar divulgação do rolê:', updateErr);
@@ -6083,7 +6065,7 @@ Entre em contato com o dono do bot:
           if (roleData.announcementKey?.id) {
             delete groupData.roleMessages[roleData.announcementKey.id];
             try {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 delete: {
                   remoteJid: from,
                   fromMe: roleData.announcementKey.fromMe !== undefined ? roleData.announcementKey.fromMe : true,
@@ -6244,15 +6226,15 @@ Entre em contato com o dono do bot:
                 }
               }
 
-              await nazu.sendMessage(from, payload, { quoted: info });
+              await chimu.sendMessage(from, payload, { quoted: info });
             } catch (mediaError) {
               console.log('Erro ao enviar mídia do rolê:', mediaError.message);
               // Se falhar, envia apenas texto
-              await nazu.sendMessage(from, { text: lines.join('\n'), mentions: [...going, ...notGoing] }, { quoted: info });
+              await chimu.sendMessage(from, { text: lines.join('\n'), mentions: [...going, ...notGoing] }, { quoted: info });
             }
           } else {
             // Se não tiver mídia, envia apenas texto
-            await nazu.sendMessage(from, { text: lines.join('\n'), mentions: [...going, ...notGoing] }, { quoted: info });
+            await chimu.sendMessage(from, { text: lines.join('\n'), mentions: [...going, ...notGoing] }, { quoted: info });
           }
         } catch (e) {
           console.error('Erro em role.info:', e);
@@ -13311,7 +13293,7 @@ Entre em contato com o dono do bot:
                 return reply(`❌ Erro ao aplicar o efeito *${command}* no áudio. Verifique se o arquivo está válido e tente novamente.`);
               }
               const hah = fs.readFileSync(ran);
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 audio: hah,
                 mimetype: 'audio/mpeg'
               }, {
@@ -13406,7 +13388,7 @@ Entre em contato com o dono do bot:
                 video: buffer453,
                 mimetype: 'video/mp4'
               };
-              await nazu.sendMessage(from, messageType, {
+              await chimu.sendMessage(from, messageType, {
                 quoted: info
               });
               await fs.unlinkSync(ran);
@@ -13502,8 +13484,7 @@ ${conversaTexto.substring(0, 8000)}
 
 Faça um resumo conciso mas completo, destacando o que é mais relevante.`;
 
-          return ia.makeCognimaRequest('meta/llama-3.3-70b-instruct', prompt, null);
-
+          return ia.makeCognimaRequest('abacusai/dracarys-llama-3.1-70b-instruct', prompt, null);
         }).then(response => {
           return reply(`💬 *Resumo da Conversa* (últimas mensagens)\n\n${formatAIResponse(response.data.choices[0].message.content)}`);
         }).catch(e => {
@@ -13567,8 +13548,7 @@ Faça um resumo conciso mas completo, destacando o que é mais relevante.`;
 
 Seja criativo e original. Não use clichês. A história deve ser envolvente do início ao fim.`;
 
-          const response = await ia.makeCognimaRequest('meta/llama-3.3-70b-instruct', prompt, null);
-
+          const response = await ia.makeCognimaRequest('qwen/qwen3-235b-a22b', prompt, null);
           await reply(`📖✨ *Sua História*\n\n${formatAIResponse(response.data.choices[0].message.content)}`);
         } catch (e) {
           console.error('Erro ao gerar história:', e);
@@ -13624,8 +13604,8 @@ Para cada recomendação, forneça:
 4. Nota de popularidade (de 1 a 10)
 
 Seja específico e recomende opções variadas (populares e menos conhecidas). Formate de forma clara e organizada.`;
-          const response = await ia.makeCognimaRequest('meta/llama-3.3-70b-instruct', prompt, null);
 
+          const response = await ia.makeCognimaRequest('qwen/qwen3-235b-a22b', prompt, null);
           await reply(`${tipoInfo.emoji} *Recomendações de ${tipoInfo.nome.charAt(0).toUpperCase() + tipoInfo.nome.slice(1)}*\n\n${formatAIResponse(response.data.choices[0].message.content)}`);
         } catch (e) {
           console.error('Erro ao gerar recomendações:', e);
@@ -15653,13 +15633,12 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
           const texto = partes.slice(1).join('|').trim();
           reply('Aguarde um momentinho... ☀️').then(() => {
             const prompt = `Traduza o seguinte texto para ${idioma}:\n\n${texto}\n\nForneça apenas a tradução, sem explicações adicionais.`;
-            ia.makeCognimaRequest('meta/llama-3.3-70b-instruct', prompt, null).then((bahz) => {
+            ia.makeCognimaRequest('qwen/qwen3-235b-a22b', prompt, null).then((bahz) => {
               reply(`🌐✨ *Prontinho! Sua tradução para ${idioma.toUpperCase()} está aqui:*\n\n${formatAIResponse(bahz.data.choices[0].message.content)}`);
             }).catch((e) => {
               console.error("Erro ao traduzir texto:", e);
               reply("❌ Não foi possível realizar a tradução no momento. Tente novamente mais tarde.");
             });
-
           });
         }
         break;
@@ -15667,7 +15646,7 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
         if (!q) return reply(`📲 *Gerador de QR Code*\n\n💡 *Como usar:*\n• Envie o texto ou link após o comando\n• Ex: ${prefix}qrcode https://exemplo.com\n• Ex: ${prefix}qrcode Seu texto aqui\n\n✨ O QR Code será gerado instantaneamente!`);
         reply('Aguarde um momentinho... ☀️').then(() => {
           const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(q)}`;
-          return nazu.sendMessage(from, {
+          return chimu.sendMessage(from, {
             image: { url: qrUrl },
             caption: `📱✨ *Seu QR Code super fofo está pronto!*\n\nConteúdo: ${q.substring(0, 100)}${q.length > 100 ? '...' : ''}`
           }, { quoted: info });
@@ -15681,7 +15660,7 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
         try {
           if (!isOwner || isOwner && isSubOwner) return reply("🚫 Apenas o Dono principal pode utilizar esse comando!");
           if (!fs.existsSync(pathz.join(__dirname, '..', 'database', 'updateSave.json'))) return reply('❌ Sua versão não tem suporte a esse sistema ainda.');
-          const AtualCom = await axios.get('https://api.github.com/repos/devcrician/nazuna/commits?per_page=1', {
+          const AtualCom = await axios.get('https://api.github.com/repos/devcrician/TheChimasBot/commits?per_page=1', {
             headers: {
               Accept: 'application/vnd.github+json'
             }
@@ -15690,7 +15669,7 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
             total
           } = JSON.parse(fs.readFileSync(pathz.join(__dirname, '..', 'database', 'updateSave.json'), 'utf-8'));
           if (AtualCom > total) {
-            const TextZin = await VerifyUpdate('devcrician/nazuna', AtualCom - total);
+            const TextZin = await VerifyUpdate('devcrician/TheChimasBot', AtualCom - total);
             await reply(TextZin);
           } else {
             await reply('Você ja esta utilizando a versão mais recente da bot.');
@@ -15720,7 +15699,7 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
             } else {
               // Se não for grupo, usar onWhatsApp para pegar LID
               try {
-                const [result] = await nazu.onWhatsApp(targetUserId.replace(/@s\.whatsapp\.net|@lid/g, ''));
+                const [result] = await chimu.onWhatsApp(targetUserId.replace(/@s\.whatsapp\.net|@lid/g, ''));
                 if (result && result.lid) {
                   targetUserId = result.lid;
                 } else if (result && result.jid) {
@@ -15746,7 +15725,7 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
               } else {
                 // Se não for grupo, usar onWhatsApp para pegar LID
                 try {
-                  const [result] = await nazu.onWhatsApp(cleanNumber);
+                  const [result] = await chimu.onWhatsApp(cleanNumber);
                   if (result && result.lid) {
                     targetUserId = result.lid;
                   } else if (result && result.jid) {
@@ -15763,7 +15742,7 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
             return reply(`📝 *Como usar:*\n\n1️⃣ Marque o usuário: ${prefix}addsubdono @usuario\n2️⃣ Ou digite o número: ${prefix}addsubdono 5511999998888`);
           }
 
-          const result = await addSubdono(targetUserId, numerodono, nazu);
+          const result = await addSubdono(targetUserId, numerodono, chimu);
           await reply(result.message);
         } catch (e) {
           console.error("Erro ao adicionar subdono:", e);
@@ -15792,7 +15771,7 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
             } else {
               // Se não for grupo, usar onWhatsApp para pegar LID
               try {
-                const [result] = await nazu.onWhatsApp(targetUserId.replace(/@s\.whatsapp\.net|@lid/g, ''));
+                const [result] = await chimu.onWhatsApp(targetUserId.replace(/@s\.whatsapp\.net|@lid/g, ''));
                 if (result && result.lid) {
                   targetUserId = result.lid;
                 } else if (result && result.jid) {
@@ -15818,7 +15797,7 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
               } else {
                 // Se não for grupo, usar onWhatsApp para pegar LID
                 try {
-                  const [result] = await nazu.onWhatsApp(cleanNumber);
+                  const [result] = await chimu.onWhatsApp(cleanNumber);
                   if (result && result.lid) {
                     targetUserId = result.lid;
                   } else if (result && result.jid) {
@@ -15841,7 +15820,7 @@ Exemplo: ${prefix}tradutor espanhol | Olá mundo! ✨`);
             return reply(`📝 *Como usar:*\n\n1️⃣ Marque o usuário: ${prefix}remsubdono @usuario\n2️⃣ Digite o número: ${prefix}remsubdono 5511999998888\n3️⃣ Use o índice da lista: ${prefix}remsubdono 1`);
           }
 
-          const result = await removeSubdono(targetUserId, nazu);
+          const result = await removeSubdono(targetUserId, chimu);
           await reply(result.message);
         } catch (e) {
           console.error("Erro ao remover subdono:", e);
@@ -15948,7 +15927,7 @@ ${prefix}addsubbot @152656307871952`
               ) {
 
                 const metadata =
-                  await nazu.groupMetadata(
+                  await chimu.groupMetadata(
                     info.key.remoteJid
                   )
 
@@ -16126,7 +16105,7 @@ ${prefix}addsubbot @152656307871952`
             }
 
             const [result] =
-              await nazu.onWhatsApp(
+              await chimu.onWhatsApp(
                 phoneNumber
               )
 
@@ -16154,7 +16133,7 @@ ${prefix}addsubbot @152656307871952`
 
                 const lid =
                   await getLidFromJidCached(
-                    nazu,
+                    chimu,
                     result.jid
                   )
 
@@ -16225,7 +16204,7 @@ ${prefix}addsubbot @152656307871952`
 
           const ownerLid =
             await getLidFromJidCached(
-              nazu,
+              chimu,
               ownerCandidate
             )
 
@@ -16442,7 +16421,7 @@ ${prefix}addsubbot @152656307871952`
       case 'limitarcmd':
         try {
           const { cmdLimitAdd } = await import('./funcs/utils/cmdlimit.js');
-          await cmdLimitAdd(nazu, from, q, reply, prefix, isOwnerOrSub);
+          await cmdLimitAdd(chimu, from, q, reply, prefix, isOwnerOrSub);
         } catch (error) {
           console.error('Error in cmdlimitar:', error);
           await reply('❌ Erro interno!');
@@ -16454,7 +16433,7 @@ ${prefix}addsubbot @152656307871952`
       case 'rmcmdlimit':
         try {
           const { cmdLimitRemove } = await import('./funcs/utils/cmdlimit.js');
-          await cmdLimitRemove(nazu, from, q, reply, prefix, isOwnerOrSub);
+          await cmdLimitRemove(chimu, from, q, reply, prefix, isOwnerOrSub);
         } catch (error) {
           console.error('Error in cmddeslimitar:', error);
           await reply('❌ Erro interno!');
@@ -16466,7 +16445,7 @@ ${prefix}addsubbot @152656307871952`
       case 'listcmdlimites':
         try {
           const { cmdLimitList } = await import('./funcs/utils/cmdlimit.js');
-          await cmdLimitList(nazu, from, q, reply, prefix, isOwnerOrSub);
+          await cmdLimitList(chimu, from, q, reply, prefix, isOwnerOrSub);
         } catch (error) {
           console.error('Error in cmdlimites:', error);
           await reply('❌ Erro interno!');
@@ -16868,7 +16847,7 @@ ${prefix}addsubbot @152656307871952`
         const levelingDataAdd = loadLevelingSafe();
         const userDataAdd = getLevelingUser(levelingDataAdd, menc_os2);
         userDataAdd.xp = (userDataAdd.xp || 0) + xpToAdd;
-        checkLevelUp(menc_os2, userDataAdd, levelingDataAdd, nazu, from);
+        checkLevelUp(menc_os2, userDataAdd, levelingDataAdd, chimu, from);
         saveLevelingSafe(levelingDataAdd);
         await reply(`✅ Adicionado ${xpToAdd} XP para @${getUserName(menc_os2)}`, {
           mentions: [menc_os2]
@@ -16911,7 +16890,7 @@ ${prefix}addsubbot @152656307871952`
               try {
                 const groupMeta = await getCachedGroupMetadata(groupId);
                 const msg = `🎉 Atenção, ${groupMeta.subject}! Adicionados ${extraDays} dias extras de aluguel.\nNova expiração: ${new Date(rentalData.groups[groupId].expiresAt).toLocaleDateString('pt-BR')}.\nMotivo: ${motivo}`;
-                await nazu.sendMessage(groupId, {
+                await chimu.sendMessage(groupId, {
                   text: msg
                 });
               } catch (e) {
@@ -17136,7 +17115,7 @@ ${prefix}addsubbot @152656307871952`
 
           // Tenta notificar o grupo
           try {
-            await nazu.sendMessage(targetGroupId, {
+            await chimu.sendMessage(targetGroupId, {
               text: `⚠️ *AVISO IMPORTANTE*\n\nO aluguel deste grupo foi removido pelo proprietário do bot.\n\n❌ O bot não funcionará mais neste grupo.\n\nPara mais informações, entre em contato com o dono.`
             });
           } catch (e) {
@@ -17214,7 +17193,7 @@ ${prefix}addsubbot @152656307871952`
 
           // Notifica o grupo
           try {
-            await nazu.sendMessage(targetGroupId, {
+            await chimu.sendMessage(targetGroupId, {
               text: `🎉 *BOA NOTÍCIA!*\n\nSeu aluguel foi estendido!\n\n➕ Dias adicionados: *${daysToAdd}*\n📅 Nova data de expiração: *${newExpirationDate}*\n⏳ Dias restantes: *${daysLeft}*\n\n✨ Continue aproveitando o bot!`
             });
           } catch (e) {
@@ -17374,7 +17353,7 @@ ${prefix}addsubbot @152656307871952`
           let adminsNotified = 0;
           const symbols = ['✨', '🌟', '⚡', '🔥', '🌈', '🍀', '💫', '🎉'];
 
-          const currentGroups = await nazu.groupFetchAllParticipating();
+          const currentGroups = await chimu.groupFetchAllParticipating();
           const currentGroupIds = Object.keys(currentGroups);
           const rentalGroupIds = Object.keys(rentalData.groups || {});
 
@@ -17402,7 +17381,7 @@ ${prefix}addsubbot @152656307871952`
             groupsLeft.push(groupId);
 
             try {
-              await nazu.sendMessage(groupId, {
+              await chimu.sendMessage(groupId, {
                 text: `⏰ O aluguel deste grupo (${groupMetadata.subject}) expirou. Estou saindo, mas vocês podem renovar o aluguel entrando em contato com o dono! Até mais! 😊${symbols[Math.floor(Math.random() * symbols.length)]}`
               });
 
@@ -17411,7 +17390,7 @@ ${prefix}addsubbot @152656307871952`
                 const delay = Math.floor(Math.random() * (500 - 100 + 1)) + 100;
                 await new Promise(resolve => setTimeout(resolve, delay));
                 try {
-                  await nazu.sendMessage(admin, {
+                  await chimu.sendMessage(admin, {
                     text: `⚠️ Olá, admin do grupo *${groupMetadata.subject}*! O aluguel do grupo expirou, e por isso saí. Para renovar, entre em contato com o dono. Obrigado! ${symbols[Math.floor(Math.random() * symbols.length)]}`
                   });
                   adminsNotified++;
@@ -17420,11 +17399,11 @@ ${prefix}addsubbot @152656307871952`
                 }
               }
 
-              await nazu.groupLeave(groupId);
+              await chimu.groupLeave(groupId);
 
               // Deleta o chat do grupo
               try {
-                if (nazu.chatModify) {
+                if (chimu.chatModify) {
                   await deleteChatByLastMessage(groupId);
                   chatsDeleted++;
                 }
@@ -17434,7 +17413,7 @@ ${prefix}addsubbot @152656307871952`
 
               // Limpa conversa do grupo
               try {
-                if (nazu.chatModify) {
+                if (chimu.chatModify) {
                   await clearChatHistorySafe(groupId);
                   groupConversationsCleared++;
                 }
@@ -17459,15 +17438,15 @@ ${prefix}addsubbot @152656307871952`
                 const groupMetadata = await getCachedGroupMetadata(groupId).catch(() => null);
                 const groupName = groupMetadata?.subject || 'Grupo desconhecido';
 
-                await nazu.sendMessage(groupId, {
+                await chimu.sendMessage(groupId, {
                   text: `👋 Este grupo não possui aluguel registrado. Estou saindo. Até mais! ${symbols[Math.floor(Math.random() * symbols.length)]}`
                 });
 
-                await nazu.groupLeave(groupId);
+                await chimu.groupLeave(groupId);
 
                 // Deleta o chat do grupo
                 try {
-                  if (nazu.chatModify) {
+                  if (chimu.chatModify) {
                     await deleteChatByLastMessage(groupId);
                     chatsDeleted++;
                   }
@@ -17477,7 +17456,7 @@ ${prefix}addsubbot @152656307871952`
 
                 // Limpa conversa do grupo
                 try {
-                  if (nazu.chatModify) {
+                  if (chimu.chatModify) {
                     await clearChatHistorySafe(groupId);
                     groupConversationsCleared++;
                   }
@@ -17495,9 +17474,9 @@ ${prefix}addsubbot @152656307871952`
 
           // Limpa todas as conversas de grupo restantes (mantém apenas privadas)
           try {
-            if (nazu.chatModify) {
+            if (chimu.chatModify) {
               // Busca todos os grupos restantes e limpa conversas
-              const remainingGroups = await nazu.groupFetchAllParticipating();
+              const remainingGroups = await chimu.groupFetchAllParticipating();
               for (const groupId of Object.keys(remainingGroups)) {
                 try {
                   await clearChatHistorySafe(groupId);
@@ -18664,7 +18643,7 @@ ${prefix}addsubbot @152656307871952`
               if (groupDescMediaTest) caption = caption.replace(/\{(?:groupdesc|descricao|desc)\}/gi, groupDescMediaTest);
               if (latencyMediaTest !== null) caption = caption.replace(/\{(?:velocidade|speed|latency)\}/gi, `${latencyMediaTest}s`);
 
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 image: imageBuffer,
                 caption: caption
               }, { quoted: info, mentions: mentionsToIncludeTest });
@@ -18705,7 +18684,7 @@ ${prefix}addsubbot @152656307871952`
               const quotedTextTest = (quotedMessageContent && (quotedMessageContent.conversation || quotedMessageContent.extendedTextMessage?.text)) || '';
               caption = caption.replace(/\{quoted\}/gi, quotedTextTest);
 
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 video: videoBuffer,
                 caption: caption
               }, { quoted: info, mentions: mentionsToIncludeTest });
@@ -18713,7 +18692,7 @@ ${prefix}addsubbot @152656307871952`
           } else if (processedResponse.type === 'audio') {
             const audioBuffer = processedResponse.buffer ? Buffer.from(processedResponse.buffer, 'base64') : null;
             if (audioBuffer) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 audio: audioBuffer,
                 mimetype: 'audio/mp4',
                 ptt: processedResponse.ptt || false
@@ -18722,7 +18701,7 @@ ${prefix}addsubbot @152656307871952`
           } else if (processedResponse.type === 'sticker') {
             const stickerBuffer = processedResponse.buffer ? Buffer.from(processedResponse.buffer, 'base64') : null;
             if (stickerBuffer) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 sticker: stickerBuffer
               }, { quoted: info });
             }
@@ -18756,7 +18735,7 @@ ${prefix}addsubbot @152656307871952`
               if (!targetUser) {
                 // Tenta usar cache/onWhatsApp, mas permite JID como fallback
                 try {
-                  const lid = await getLidFromJidCached(nazu, candidateJid);
+                  const lid = await getLidFromJidCached(chimu, candidateJid);
                   if (lid && lid.includes('@lid')) {
                     targetUser = lid;
                   } else {
@@ -18771,7 +18750,7 @@ ${prefix}addsubbot @152656307871952`
               return reply('❌ Número inválido! Use um número completo (ex: 5511999998888)');
             }
           }
-          const result = await addGlobalBlacklist(targetUser, reason, pushname, nazu);
+          const result = await addGlobalBlacklist(targetUser, reason, pushname, chimu);
           await reply(result.message, {
             mentions: [targetUser]
           });
@@ -18797,7 +18776,7 @@ ${prefix}addsubbot @152656307871952`
               }
               if (!targetUser) {
                 try {
-                  const lid = await getLidFromJidCached(nazu, candidateJid);
+                  const lid = await getLidFromJidCached(chimu, candidateJid);
                   if (lid && lid.includes('@lid')) {
                     targetUser = lid;
                   } else {
@@ -18812,7 +18791,7 @@ ${prefix}addsubbot @152656307871952`
               return reply('❌ Número inválido! Use um número completo (ex: 5511999998888)');
             }
           }
-          const result = await removeGlobalBlacklist(targetUser, nazu);
+          const result = await removeGlobalBlacklist(targetUser, chimu);
           await reply(result.message, {
             mentions: [targetUser]
           });
@@ -18848,7 +18827,7 @@ ${prefix}addsubbot @152656307871952`
           if (!q) return reply(`❌️ *Forma incorreta, use está como exemplo:* ${prefix + command} https://instagram.com/hiudyyy_`);
           const shortResponse = await axios.post("https://spoo.me/api/v1/shorten", {
             long_url: q,
-            alias: `nazuna_${Math.floor(10000 + Math.random() * 90000)}`
+            alias: `TheChimasBot_${Math.floor(10000 + Math.random() * 90000)}`
           });
           reply(`✅ *Link encurtado com sucesso!*\n\n🔗 *Link curto:* ${shortResponse.data.short_url}\n📎 *Link original:* ${shortResponse.data.long_url}`);
         } catch (e) {
@@ -18860,7 +18839,7 @@ ${prefix}addsubbot @152656307871952`
       case 'gerarnick':
       case 'nickgenerator':
         try {
-          if (!q) return reply(`🎮 *GERADOR DE NICK*\n\n📝 *Como usar:*\n• Digite o nick após o comando\n• Ex: ${prefix}nick nazuna`);
+          if (!q) return reply(`🎮 *GERADOR DE NICK*\n\n📝 *Como usar:*\n• Digite o nick após o comando\n• Ex: ${prefix}nick TheChimasBot`);
           var datzn;
           datzn = await styleText(q);
           await reply(datzn.join('\n'));
@@ -18873,7 +18852,7 @@ ${prefix}addsubbot @152656307871952`
       case 'ssweb':
         try {
           if (!q) return reply(`Cade o link?`);
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             image: {
               url: `https://image.thum.io/get/fullpage/${q}`
             }
@@ -19160,400 +19139,182 @@ ${prefix}addsubbot @152656307871952`
 
 
       case 'play':
-      case 'ytmp3':
-        try {
-          if (!q) {
-            return reply(`╭━━━⊱ 🎵 *YOUTUBE MP3* 🎵 ⊱━━━╮
-│
-│ 📝 Digite o nome da música ou
-│     um link do YouTube
-│
-│  *Exemplos:*
-│  ${prefix + command} Back to Black
-│  ${prefix + command} https://youtube.com/...
-│
-╰━━━━━━━━━━━━━━━━━━━━━━━━━╯`);
-          }
+  try {
+    if (!q) return reply('📝 Digite o nome ou o link do vídeo do YouTube!');
 
-          let videoUrl;
-          let videoInfo;
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execPromise = promisify(exec);
+    const ytSearch = (await import('yt-search')).default;
+    const fs = await import('fs');
+    const path = await import('path');
 
-          if (q.includes('youtube.com') || q.includes('youtu.be')) {
-            videoUrl = q;
-            await reply('Aguarde um momentinho... ☀️');
+    let videoUrl = q.trim();
+    let videoInfo = null;
 
-            youtube.mp3(videoUrl, 128)
-              .then(async (dlRes) => {
-                if (!dlRes.ok)
-                  return nazu.sendMessage(from, { text: `❌ Erro ao baixar o áudio: ${dlRes.msg}` }, { quoted: info });
+    // Normaliza links encurtados (youtu.be)
+    if (videoUrl.includes('youtu.be/')) {
+      const id = videoUrl.split('youtu.be/')[1]?.split('?')[0];
+      if (id) videoUrl = `https://www.youtube.com/watch?v=${id}`;
+    }
 
-                try {
-                  await nazu.sendMessage(from, {
-                    audio: dlRes.buffer,
-                    mimetype: 'audio/mpeg'
-                  }, { quoted: info });
-                } catch (audioError) {
-                  if (String(audioError).includes("ENOSPC") || String(audioError).includes("size")) {
-                    await nazu.sendMessage(from, { text: '📦 Arquivo muito grande para enviar como áudio, enviando como documento...' }, { quoted: info });
-                    await nazu.sendMessage(from, {
-                      document: dlRes.buffer,
-                      fileName: `${dlRes.filename}`,
-                      mimetype: 'audio/mpeg'
-                    }, { quoted: info });
-                  } else {
-                    console.error('Erro ao enviar áudio (link direto):', audioError);
-                    nazu.sendMessage(from, { text: '❌ Ocorreu um erro ao enviar o áudio.' }, { quoted: info });
-                  }
-                }
-              })
-              .catch((downloadError) => {
-                console.error('Erro no download (link direto):', downloadError);
-                if (String(downloadError).includes("age")) {
-                  nazu.sendMessage(from, { text: `🔞 Este conteúdo possui restrição de idade e não pode ser baixado.` }, { quoted: info });
-                } else {
-                  nazu.sendMessage(from, { text: `❌ Ocorreu um erro ao baixar o áudio: ${downloadError.message}` }, { quoted: info });
-                }
-              });
+    if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
+      await reply('🔍 *Pesquisando no YouTube...*');
+      const searchResult = await ytSearch(videoUrl);
+      if (!searchResult?.videos?.length) return reply('❌ NENHUM VÍDEO ENCONTRADO.');
+      videoInfo = searchResult.videos[0];
+      videoUrl = videoInfo.url;
+    } else {
+      const searchResult = await ytSearch(videoUrl);
+      if (searchResult?.videos?.length) {
+        videoInfo = searchResult.videos[0];
+      }
+    }
 
-            return;
-          }
+    // Exibe o card informativo único
+    if (videoInfo) {
+      const caption = `🎵 *Conteúdo Encontrado* 🎵\n\n📌 *Título:* ${videoInfo.title}\n👤 *Canal:* ${videoInfo.author.name}\n⏱ *Duração:* ${videoInfo.timestamp}\n👀 *Views:* ${videoInfo.views.toLocaleString('pt-BR')}\n🔗 *Link:* ${videoInfo.url}\n\n⏳ *Baixando o Áudio e o Vídeo localmente...*`;
+      await chimu.sendMessage(from, { image: { url: videoInfo.thumbnail }, caption }, { quoted: info });
+    } else {
+      await reply('⏳ Baixando o Áudio e o Vídeo localmente, aguarde...');
+    }
 
-          if (!youtube || typeof youtube.search !== 'function') {
-            console.warn('[YOUTUBE] search function not available');
-            return reply(`❌ Sistema de busca do YouTube não está disponível no momento.`);
-          }
+    // Aponta dinamicamente para a pasta DirTemp a partir do diretório onde este arquivo está
+const dirTemp = path.join(__dirname, 'dados', 'src', 'DirTemp');
 
-          // Mensagem de pesquisa
-          await reply(`🔍 *Pesquisando no YouTube...*\n\n🎵 Música: *${q}*\n\n⏳ Aguarde um momento...`);
+    if (!fs.existsSync(dirTemp)) {
+      fs.mkdirSync(dirTemp, { recursive: true });
+    }
 
-          // Usando .then em vez de await para a pesquisa do YouTube
-          youtube.search(q)
-            .then((result) => {
-              if (!result.ok) return reply(`${result.msg}`);
-              videoInfo = result;
-              videoUrl = result.data.url;
+    const timestamp = Date.now();
+    const audioPath = path.join(dirTemp, `yt_audio_${timestamp}.mp3`);
+    const videoPath = path.join(dirTemp, `yt_video_${timestamp}.mp4`);
 
-              if (videoInfo.data.seconds > 1800) return reply(`⚠️ Este vídeo é muito longo (${videoInfo.data.timestamp}).\nPor favor, escolha um vídeo com menos de 30 minutos.`);
+    // 1️⃣ ETAPA: Processa e envia o ÁUDIO (MP3)
+    const cmdAudio = `yt-dlp -x --audio-format mp3 --no-warnings -o "${audioPath}" "${videoUrl}"`;
+    await execPromise(cmdAudio);
 
-              const views = typeof videoInfo.data.views === 'number'
-                ? videoInfo.data.views.toLocaleString('pt-BR')
-                : videoInfo.data.views;
+    if (fs.existsSync(audioPath)) {
+      const audioBuffer = fs.readFileSync(audioPath);
+      fs.unlinkSync(audioPath); // Limpa o arquivo temporário
 
-              const description = videoInfo.data.description
-                ? videoInfo.data.description.slice(0, 100) + (videoInfo.data.description.length > 100 ? '...' : '')
-                : 'Sem descrição disponível';
+      await chimu.sendMessage(from, {
+        audio: audioBuffer,
+        mimetype: 'audio/mpeg'
+      }, { quoted: info });
+    }
 
-              const caption = `🎵 *Música Encontrada* 🎵\n\n📌 *Título:* ${videoInfo.data.title}\n👤 *Artista/Canal:* ${videoInfo.data.author.name}\n⏱ *Duração:* ${videoInfo.data.timestamp} (${videoInfo.data.seconds} segundos)\n👀 *Visualizações:* ${views}\n📅 *Publicado:* ${videoInfo.data.ago}\n📜 *Descrição:* ${description}\n🔗 *Link:* ${videoInfo.data.url}\n\n🎧 *Baixando e processando sua música, aguarde...*`;
+    // 2️⃣ ETAPA: Processa e envia o VÍDEO COMPLETO COM SOM (MP4)
+    const cmdVideo = `yt-dlp -f "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/b" --recode-video mp4 --no-warnings -o "${videoPath}" "${videoUrl}"`;
+    await execPromise(cmdVideo);
 
-              nazu.sendMessage(from, {
-                image: { url: videoInfo.data.thumbnail },
-                caption,
-                footer: `${nomebot} • Versão ${botVersion}`
-              }, { quoted: info }).catch((sendErr) => console.error('Erro ao enviar mensagem de resultado (busca):', sendErr));
+    if (fs.existsSync(videoPath)) {
+      const videoBuffer = fs.readFileSync(videoPath);
+      fs.unlinkSync(videoPath); // Limpa o arquivo temporário
 
-              youtube.mp3(videoUrl, 128)
-                .then(async (dlRes) => {
-                  if (!dlRes.ok) return nazu.sendMessage(from, { text: `❌ Erro ao baixar o áudio: ${dlRes.msg}` }, { quoted: info });
+      await chimu.sendMessage(from, {
+        video: videoBuffer,
+        mimetype: 'video/mp4',
+        caption: `🎥 *${videoInfo?.title || 'Vídeo do YouTube'}*`
+      }, { quoted: info });
+    }
 
-                  try {
-                    await nazu.sendMessage(from, {
-                      audio: dlRes.buffer,
-                      mimetype: 'audio/mpeg'
-                    }, { quoted: info });
-                  } catch (audioError) {
-                    if (String(audioError).includes("ENOSPC") || String(audioError).includes("size")) {
-                      await nazu.sendMessage(from, { text: '📦 Arquivo muito grande para enviar como áudio, enviando como documento...' }, { quoted: info });
-                      await nazu.sendMessage(from, {
-                        document: dlRes.buffer,
-                        fileName: `${dlRes.filename}`,
-                        mimetype: 'audio/mpeg'
-                      }, { quoted: info });
-                    } else {
-                      console.error('Erro ao enviar áudio (busca):', audioError);
-                      nazu.sendMessage(from, { text: '❌ Ocorreu um erro ao enviar o áudio.' }, { quoted: info });
-                    }
-                  }
-                })
-                .catch((downloadError) => {
-                  console.error('Erro no download (busca):', downloadError);
-                  if (downloadError.message?.includes('API key inválida')) {
-                    nazu.sendMessage(from, { text: '🤖 *Sistema de YouTube temporariamente indisponível*' }, { quoted: info });
-                  } else if (String(downloadError).includes("age")) {
-                    nazu.sendMessage(from, { text: `🔞 Este conteúdo possui restrição de idade e não pode ser baixado.` }, { quoted: info });
-                  } else {
-                    nazu.sendMessage(from, { text: `❌ Ocorreu um erro ao baixar o áudio: ${downloadError.message}` }, { quoted: info });
-                  }
-                });
-            })
-            .catch((error) => {
-              console.error('Erro ao buscar vídeo no YouTube:', error);
-              return reply(`❌ Erro ao buscar vídeo: ${error.message}`);
-            });
+    return;
 
-          // Retornar após iniciar a pesquisa em modo promisse para não continuar executando o bloco
-          return;
+  } catch (error) {
+    console.error('Erro no download local em DirTemp com yt-dlp:', error);
+    reply('❌ Falha ao processar e baixar os arquivos localmente.');
+  }
+  break;
+        
+        
+        
+case 'pinterest':
+case 'pin':
+  try {
+    if (!q) {
+      return reply(`Digite o termo para pesquisar ou o link do Pinterest.\nExemplo: ${prefix}pinterest gatinhos`);
+    }
 
-        } catch (error) {
-          console.error('Erro no comando play/ytmp3 (bloco principal):', error);
+    // Importação dinâmica para evitar conflitos de escopo
+    const axios = (await import('axios')).default;
+    const cheerio = await import('cheerio');
 
-          if (String(error).includes("age"))
-            return reply(`🔞 Este conteúdo possui restrição de idade e não pode ser processado.`);
+    const PIN_URL_REGEX = /^(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?pinterest\.\w{2,6}(?:\.\w{2})?\/pin\/([0-9a-zA-Z]+)|^https?:\/\/pin\.it\/[a-zA-Z0-9]+/i;
 
-          reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
+    const searchTerm = q.trim();
+    const isPinUrl = PIN_URL_REGEX.test(searchTerm);
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    };
+
+    let mediaUrls = [];
+
+    if (isPinUrl) {
+      const response = await axios.get(searchTerm, { headers, maxRedirects: 5 });
+      const $ = cheerio.load(response.data);
+
+      const videoUrl = $('meta[property="og:video"]').attr('content') || $('meta[name="og:video"]').attr('content');
+      const imageUrl = $('meta[property="og:image"]').attr('content') || $('meta[name="og:image"]').attr('content');
+
+      if (videoUrl) {
+        mediaUrls.push({ type: 'video', url: videoUrl });
+      } else if (imageUrl) {
+        const highResUrl = imageUrl.replace(/\/\d+x\//, '/originals/');
+        mediaUrls.push({ type: 'image', url: highResUrl });
+      }
+    } else {
+      const searchUrl = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(searchTerm)}`;
+      const { data } = await axios.get(searchUrl, { headers });
+      const $ = cheerio.load(data);
+
+      const uniqueUrls = new Set();
+      $('img').each((_, el) => {
+        const src = $(el).attr('src');
+        if (src && src.includes('pinimg.com/')) {
+          const highRes = src.replace(/\/\d+x\//, '/originals/').replace(/\/236x\//, '/736x/');
+          uniqueUrls.add(highRes);
         }
-        break;
+      });
 
-      case 'spotifydl':
-      case 'spotify':
-        try {
-          if (!q) {
-            return reply(`╭━━━⊱ 🎵 *SPOTIFY DOWNLOAD* 🎵 ⊱━━━╮
-│
-│ 📝 Digite o link da música do Spotify
-│
-│  *Exemplo:*
-│  ${prefix + command} https://open.spotify.com/track/...
-│
-╰━━━━━━━━━━━━━━━━━━━━━━━━━╯`);
-          }
+      mediaUrls = Array.from(uniqueUrls).map(url => ({ type: 'image', url }));
+    }
 
-          if (!q.includes('open.spotify.com/track/')) {
-            return reply('❌ Por favor, envie um link válido do Spotify.\n\n💡 Dica: Use o comando play2 para buscar por nome!');
-          }
+    if (mediaUrls.length === 0) {
+      return reply(
+        isPinUrl
+          ? 'Não foi possível extrair a mídia deste link do Pinterest. 😕'
+          : 'Nenhuma imagem encontrada para este termo. 😕'
+      );
+    }
 
-          await reply('🎵 Baixando do Spotify... Aguarde um momento!');
+    const itemsToSend = mediaUrls.slice(0, 3);
 
-          const downloadResult = await spotifyModule.download(q);
+    for (const item of itemsToSend) {
+      const caption = isPinUrl
+        ? '📌 Download do Pinterest'
+        : `📌 Resultado da pesquisa por "${searchTerm}"`;
 
-          if (!downloadResult.ok) {
-            return reply(`❌ ${downloadResult.msg}`);
-          }
+      if (item.type === 'video') {
+        await chimu.sendMessage(from, { video: { url: item.url }, caption }, { quoted: info });
+      } else {
+        await chimu.sendMessage(from, { image: { url: item.url }, caption }, { quoted: info });
+      }
+    }
 
-          const caption = `🎵 *Música Baixada do Spotify!* 🎵\n\n` +
-            `📌 *Título:* ${downloadResult.title}\n` +
-            `👤 *Artista(s):* ${Array.isArray(downloadResult.artists) ? downloadResult.artists.join(', ') : downloadResult.artists}\n` +
-            `${downloadResult.year ? `📅 *Ano:* ${downloadResult.year}\n` : ''}` +
-            `🎧 *Enviando áudio...*`;
-
-          try {
-            await reply(caption);
-          } catch (err) {
-            console.error('Erro ao enviar caption:', err);
-          }
-
-          try {
-            await nazu.sendMessage(from, {
-              audio: downloadResult.buffer,
-              mimetype: 'audio/mpeg',
-              fileName: downloadResult.filename
-            }, { quoted: info });
-          } catch (audioError) {
-            if (String(audioError).includes("ENOSPC") || String(audioError).includes("size")) {
-              await reply('📦 Arquivo muito grande, enviando como documento...');
-              await nazu.sendMessage(from, {
-                document: downloadResult.buffer,
-                fileName: downloadResult.filename,
-                mimetype: 'audio/mpeg'
-              }, { quoted: info });
-            } else {
-              console.error('Erro ao enviar áudio do Spotify:', audioError);
-              reply('❌ Ocorreu um erro ao enviar o áudio.');
-            }
-          }
-
-        } catch (error) {
-          console.error('Erro no comando spotifydl:', error);
-          reply("❌ Ocorreu um erro ao processar sua solicitação.");
-        }
-        break;
-
-      case 'pinterest':
-      case 'pin':
-        try {
-          if (!q) return reply('Digite o termo para pesquisar no Pinterest. Exemplo: ' + prefix + 'pinterest gatinhos');
-
-          const PIN_URL_REGEX = /^(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?pinterest\.\w{2,6}(?:\.\w{2})?\/pin\/([0-9a-zA-Z]+)|^https?:\/\/pin\.it\/[a-zA-Z0-9]+/i;
-
-          const searchTerm = q.trim();
-          const isPinUrl = PIN_URL_REGEX.test(searchTerm);
-
-          const datinha = await (isPinUrl
-            ? pinterest.dl(searchTerm)
-            : pinterest.search(searchTerm)
-          );
-
-
-          if (typeof datinha === 'string') {
-            return reply(datinha);
-          }
-
-          if (!datinha.ok) {
-            return reply(datinha.msg);
-          }
-
-          if (!datinha.urls || datinha.urls.length === 0) {
-            return reply(isPinUrl
-              ? 'Não foi possível baixar este link do Pinterest. 😕'
-              : 'Nenhuma imagem encontrada para o termo pesquisado. 😕'
-            );
-          }
-
-          const itemsToSend = datinha.urls.slice(0, 3);
-
-          for (const url of itemsToSend) {
-            await nazu.sendMessage(from, {
-              image: { url },
-              caption: isPinUrl
-                ? '📌 Download do Pinterest'
-                : `📌 Resultado da pesquisa por "${searchTerm}"`
-            }, { quoted: info });
-          }
-
-        } catch (e) {
-          console.error('Erro no comando pinterest:', e);
-          reply("Ocorreu um erro ao processar o Pinterest 💔");
-        }
-        break;
-
-
-
-
-      case 'play2':
-
-        try {
-          if (!q) {
-            return reply(`╭━━━⊱ 🎵 *YOUTUBE MP3* 🎵 ⊱━━━╮
-│
-│ 📝 Digite o nome da música ou
-│     um link do YouTube
-│
-│  *Exemplos:*
-│  ${prefix + command} Back to Black
-│  ${prefix + command} https://youtube.com/...
-│
-╰━━━━━━━━━━━━━━━━━━━━━━━━━╯`);
-          }
-
-          let videoUrl;
-          let videoInfo;
-
-          if (q.includes('youtube.com') || q.includes('youtu.be')) {
-            videoUrl = q;
-            await reply('Aguarde um momentinho... ☀️');
-
-            youtube.mp3(videoUrl, 128)
-              .then(async (dlRes) => {
-                if (!dlRes.ok)
-                  return nazu.sendMessage(from, { text: `❌ Erro ao baixar o áudio: ${dlRes.msg}` }, { quoted: info });
-
-                try {
-                  await nazu.sendMessage(from, {
-                    audio: dlRes.buffer,
-                    mimetype: 'audio/mpeg'
-                  }, { quoted: info });
-                } catch (audioError) {
-                  if (String(audioError).includes("ENOSPC") || String(audioError).includes("size")) {
-                    await nazu.sendMessage(from, { text: '📦 Arquivo muito grande para enviar como áudio, enviando como documento...' }, { quoted: info });
-                    await nazu.sendMessage(from, {
-                      document: dlRes.buffer,
-                      fileName: `${dlRes.filename}`,
-                      mimetype: 'audio/mpeg'
-                    }, { quoted: info });
-                  } else {
-                    console.error('Erro ao enviar áudio (link direto):', audioError);
-                    nazu.sendMessage(from, { text: '❌ Ocorreu um erro ao enviar o áudio.' }, { quoted: info });
-                  }
-                }
-              })
-              .catch((downloadError) => {
-                console.error('Erro no download (link direto):', downloadError);
-                if (String(downloadError).includes("age")) {
-                  nazu.sendMessage(from, { text: `🔞 Este conteúdo possui restrição de idade e não pode ser baixado.` }, { quoted: info });
-                } else {
-                  nazu.sendMessage(from, { text: `❌ Ocorreu um erro ao baixar o áudio: ${downloadError.message}` }, { quoted: info });
-                }
-              });
-
-            return;
-          }
-
-          if (!youtube || typeof youtube.search !== 'function') {
-            console.warn('[YOUTUBE] search function not available');
-            return reply(`❌ Sistema de busca do YouTube não está disponível no momento.`);
-          }
-
-          // Mensagem de pesquisa
-          await reply(`🔍 *Pesquisando no YouTube...*\n\n🎵 Música: *${q}*\n\n⏳ Aguarde um momento...`);
-
-          // Usando .then em vez de await para a pesquisa do YouTube
-          youtube.search(q)
-            .then((result) => {
-              if (!result.ok) return reply(`${result.msg}`);
-              videoInfo = result;
-              videoUrl = result.data.url;
-
-              if (videoInfo.data.seconds > 1800) return reply(`⚠️ Este vídeo é muito longo (${videoInfo.data.timestamp}).\nPor favor, escolha um vídeo com menos de 30 minutos.`);
-
-              const views = typeof videoInfo.data.views === 'number'
-                ? videoInfo.data.views.toLocaleString('pt-BR')
-                : videoInfo.data.views;
-
-              const description = videoInfo.data.description
-                ? videoInfo.data.description.slice(0, 100) + (videoInfo.data.description.length > 100 ? '...' : '')
-                : 'Sem descrição disponível';
-
-
-              youtube.mp3(videoUrl, 128)
-                .then(async (dlRes) => {
-                  if (!dlRes.ok) return nazu.sendMessage(from, { text: `❌ Erro ao baixar o áudio: ${dlRes.msg}` }, { quoted: info });
-
-                  try {
-                    await nazu.sendMessage(from, {
-                      audio: dlRes.buffer,
-                      mimetype: 'audio/mpeg'
-                    }, { quoted: info });
-                  } catch (audioError) {
-                    if (String(audioError).includes("ENOSPC") || String(audioError).includes("size")) {
-                      await nazu.sendMessage(from, { text: '📦 Arquivo muito grande para enviar como áudio, enviando como documento...' }, { quoted: info });
-                      await nazu.sendMessage(from, {
-                        document: dlRes.buffer,
-                        fileName: `${dlRes.filename}`,
-                        mimetype: 'audio/mpeg'
-                      }, { quoted: info });
-                    } else {
-                      console.error('Erro ao enviar áudio (busca):', audioError);
-                      nazu.sendMessage(from, { text: '❌ Ocorreu um erro ao enviar o áudio.' }, { quoted: info });
-                    }
-                  }
-                })
-                .catch((downloadError) => {
-                  console.error('Erro no download (busca):', downloadError);
-                  if (downloadError.message?.includes('API key inválida')) {
-                    nazu.sendMessage(from, { text: '🤖 *Sistema de YouTube temporariamente indisponível*' }, { quoted: info });
-                  } else if (String(downloadError).includes("age")) {
-                    nazu.sendMessage(from, { text: `🔞 Este conteúdo possui restrição de idade e não pode ser baixado.` }, { quoted: info });
-                  } else {
-                    nazu.sendMessage(from, { text: `❌ Ocorreu um erro ao baixar o áudio: ${downloadError.message}` }, { quoted: info });
-                  }
-                });
-            })
-            .catch((error) => {
-              console.error('Erro ao buscar vídeo no YouTube:', error);
-              return reply(`❌ Erro ao buscar vídeo: ${error.message}`);
-            });
-
-          // Retornar após iniciar a pesquisa em modo promisse para não continuar executando o bloco
-          return;
-
-        } catch (error) {
-          console.error('Erro no comando play/ytmp3 (bloco principal):', error);
-
-          if (String(error).includes("age"))
-            return reply(`🔞 Este conteúdo possui restrição de idade e não pode ser processado.`);
-
-          reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
-        }
-        break;
+  } catch (e) {
+    console.error('Erro no comando pinterest:', e);
+    reply('Ocorreu um erro ao processar a solicitação do Pinterest. 💔');
+  }
+  break;
+      
+      
+      
+      
+      
+      
+      
+      
       case 'soundclouddl':
       case 'soundcloud':
         try {
@@ -19587,7 +19348,7 @@ ${prefix}addsubbot @152656307871952`
                 `🎧 *Enviando áudio...*`;
 
               try {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   image: { url: result.thumbnail },
                   caption
                 }, { quoted: info });
@@ -19596,7 +19357,7 @@ ${prefix}addsubbot @152656307871952`
               }
 
               try {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   audio: result.buffer,
                   mimetype: 'audio/mpeg',
                   fileName: result.filename
@@ -19604,7 +19365,7 @@ ${prefix}addsubbot @152656307871952`
               } catch (audioError) {
                 if (String(audioError).includes("ENOSPC") || String(audioError).includes("size")) {
                   await reply('📦 Arquivo muito grande, enviando como documento...');
-                  await nazu.sendMessage(from, {
+                  await chimu.sendMessage(from, {
                     document: result.buffer,
                     fileName: result.filename,
                     mimetype: 'audio/mpeg'
@@ -19678,7 +19439,7 @@ ${prefix}addsubbot @152656307871952`
                 `🎧 *Baixando e processando...*`;
 
               try {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   image: { url: result.thumbnail },
                   caption
                 }, { quoted: info });
@@ -19687,7 +19448,7 @@ ${prefix}addsubbot @152656307871952`
               }
 
               try {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   audio: result.buffer,
                   mimetype: 'audio/mpeg',
                   fileName: result.filename
@@ -19695,7 +19456,7 @@ ${prefix}addsubbot @152656307871952`
               } catch (audioError) {
                 if (String(audioError).includes("ENOSPC") || String(audioError).includes("size")) {
                   await reply('📦 Arquivo muito grande, enviando como documento...');
-                  await nazu.sendMessage(from, {
+                  await chimu.sendMessage(from, {
                     document: result.buffer,
                     fileName: result.filename,
                     mimetype: 'audio/mpeg'
@@ -19720,179 +19481,197 @@ ${prefix}addsubbot @152656307871952`
           reply("❌ Ocorreu um erro ao processar sua solicitação.");
         }
         break;
-
-      case 'playvid':
-      case 'ytmp4':
-        try {
-          if (!q) return reply(`Digite o nome do vídeo ou um link do YouTube.\n> Ex: ${prefix + command} Back to Black`);
-
-          let videoUrl;
-
-          if (q.includes('youtube.com') || q.includes('youtu.be')) {
-            videoUrl = q;
-            reply('Aguarde um momentinho... ☀️');
-            youtube.mp4(videoUrl, 360)
-              .then(async (dlRes) => {
-                if (!dlRes.ok) return reply(dlRes.msg);
-
-                try {
-                  await nazu.sendMessage(from, {
-                    video: dlRes.buffer,
-                    fileName: `${dlRes.filename}`,
-                    mimetype: 'video/mp4'
-                  }, {
-                    quoted: info
-                  });
-                } catch (videoError) {
-                  if (String(videoError).includes("ENOSPC") || String(videoError).includes("size")) {
-                    await reply('Arquivo muito grande, enviando como documento...');
-                    await nazu.sendMessage(from, {
-                      document: dlRes.buffer,
-                      fileName: `${dlRes.filename}`,
-                      mimetype: 'video/mp4'
-                    }, {
-                      quoted: info
-                    });
-                  } else {
-                    throw videoError;
-                  }
-                }
-              })
-              .catch((e) => {
-                console.error('Erro ao baixar/enviar vídeo direto (promise):', e);
-                reply('❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.');
-              });
-            return;
-          } else {
-            // Use Promise .then for search
-            youtube.search(q)
-              .then((videoInfo) => {
-                if (!videoInfo.ok) return reply(videoInfo.msg);
-                videoUrl = videoInfo.data.url;
-
-                const caption = `\n🎬 *Vídeo Encontrado* 🎬\n\n📌 *Título:* ${videoInfo.data.title}\n👤 *Artista/Canal:* ${videoInfo.data.author.name}\n⏱ *Duração:* ${videoInfo.data.timestamp} (${videoInfo.data.seconds} segundos)\n👀 *Visualizações:* ${videoInfo.data.views.toLocaleString()}\n📅 *Publicado:* ${videoInfo.data.ago}\n📜 *Descrição:* ${videoInfo.data.description.slice(0, 100)}${videoInfo.data.description.length > 100 ? '...' : ''}\n🔗 *Link:* ${videoInfo.data.url}\n\n📹 *Enviando seu vídeo, aguarde!*`;
-
-                nazu.sendMessage(from, {
-                  image: { url: videoInfo.data.thumbnail },
-                  caption: caption,
-                  footer: `By: ${nomebot}`
-                }, { quoted: info }).catch((sendErr) => console.error('Erro ao enviar mensagem de resultado (playvid):', sendErr));
-
-                return youtube.mp4(videoUrl, 360);
-              })
-              .then(async (dlRes) => {
-                if (!dlRes.ok) return reply(dlRes.msg);
-
-                try {
-                  await nazu.sendMessage(from, {
-                    video: dlRes.buffer,
-                    fileName: `${dlRes.filename}`,
-                    mimetype: 'video/mp4'
-                  }, { quoted: info });
-                } catch (videoError) {
-                  if (String(videoError).includes("ENOSPC") || String(videoError).includes("size")) {
-                    await reply('Arquivo muito grande, enviando como documento...');
-                    await nazu.sendMessage(from, {
-                      document: dlRes.buffer,
-                      fileName: `${dlRes.filename}`,
-                      mimetype: 'video/mp4'
-                    }, { quoted: info });
-                  } else {
-                    throw videoError;
-                  }
-                }
-              })
-              .catch((e) => {
-                console.error('Erro no download/playvid:', e);
-                reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
-              });
-
-            return;
-          }
-
-          // O fluxo de busca/baixar já foi tratado via promessas acima.
-        } catch (e) {
-          console.error('Erro no comando playvid/ytmp4:', e);
-
-          reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
-        }
-        break;
       case 'letra':
-      case 'lyrics':
-        try {
+case 'lyrics': {
+    if (!q) return reply(`Cadê o nome da música? Ex: ${setprefix}letra Pollo Vagalumes`);
 
-          if (!q) return reply('cade o nome da musica?');
+    reply('Aguarde um momentinho... ☀️');
 
-          await reply('Aguarde um momentinho... ☀️');
+    try {
+        const input = q.trim();
+        let artist = '';
+        let title = '';
 
-          const res = await Lyrics(q);
+        // SE O USUÁRIO USOU O TRAÇO "-"
+        if (input.includes('-')) {
+            const parts = input.split('-');
+            const part1 = parts[0].trim();
+            const part2 = parts.slice(1).join('-').trim();
 
-          if (typeof res === 'string') {
-            return reply(res);
-          }
+            // Testa primeiro "Parte 1 - Parte 2"
+            let res = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(part1)}/${encodeURIComponent(part2)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.lyrics) {
+                    const mensagemFinal = `*${part1} - ${part2}*\n\n${data.lyrics}`;
+                    await chimu.sendMessage(from, { text: mensagemFinal }, { quoted: info });
+                    break;
+                }
+            }
 
-          if (!res.image) {
-            return await nazu.sendMessage(from, {
-              text: res.text
-            }, { quoted: info });
-          }
-
-          await nazu.sendMessage(from, {
-            image: { url: res.image },
-            caption: res.text
-          }, { quoted: info });
-
-        } catch (e) {
-          console.error(e);
-          reply("ocorreu um erro 💔");
+            // Se falhar, testa invertido "Parte 2 - Parte 1"
+            res = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(part2)}/${encodeURIComponent(part1)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.lyrics) {
+                    const mensagemFinal = `*${part2} - ${part1}*\n\n${data.lyrics}`;
+                    await chimu.sendMessage(from, { text: mensagemFinal }, { quoted: info });
+                    break;
+                }
+            }
         }
-        break;
 
-      case 'tiktok':
-      case 'tiktokaudio':
-      case 'tiktokvideo':
-      case 'tiktoks':
-      case 'tiktoksearch':
-      case 'ttk':
-      case 'tkk':
-        try {
-          if (!q) return reply(`Digite um nome ou o link de um vídeo.\n> Ex: ${prefix}${command} Gato`);
+        // SE NÃO USOU TRAÇO OU SE A BUSCA DIRETA FALHOU: usa o endpoint /suggest
+        const suggestRes = await fetch(`https://api.lyrics.ovh/suggest/${encodeURIComponent(input)}`);
+        
+        if (suggestRes.ok) {
+            const suggestData = await suggestRes.json();
+            
+            // Pega o primeiro resultado retornado do Deezer
+            if (suggestData.data && suggestData.data.length > 0) {
+                artist = suggestData.data[0].artist.name;
+                title = suggestData.data[0].title;
 
-          reply('Aguarde um momentinho... ☀️');
-          const isTikTokUrl = q.includes('tiktok.com');
-          const tiktokPromise = isTikTokUrl ? tiktok.dl(q) : tiktok.search(q);
-
-          tiktokPromise
-            .then(async (datinha) => {
-              if (!datinha.ok) return reply(datinha.msg);
-
-              const urlz = datinha.urls?.[0];
-
-              if (!urlz) {
-                return reply('❌ Não foi possível obter o link do vídeo.');
-              }
-
-              await nazu.sendMessage(from, {
-                [datinha.type || 'video']: {
-                  url: urlz
-                },
-                caption: datinha.title || undefined
-              }, {
-                quoted: info
-              });
-            })
-            .catch(async (e) => {
-              console.error('Erro no comando TikTok (promise):', e);
-              reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
-            });
-
-          return;
-        } catch (e) {
-          console.error('Erro no comando TikTok:', e);
-
-          reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
+                // Busca a letra com o Artista e Título oficiais obtidos do suggest
+                const lyricsRes = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`);
+                if (lyricsRes.ok) {
+                    const lyricsData = await lyricsRes.json();
+                    if (lyricsData.lyrics) {
+                        const mensagemFinal = `*${artist} - ${title}*\n\n${lyricsData.lyrics}`;
+                        await chimu.sendMessage(from, { text: mensagemFinal }, { quoted: info });
+                        break;
+                    }
+                }
+            }
         }
-        break;
+
+        return reply('Não encontrei a letra dessa música. Tente no formato: *Artista - Música* 💔 Acesse o site https://lyrics.ovh/');
+
+    } catch (e) {
+        console.error(e);
+        reply('Ocorreu um erro ao buscar a letra 💔 Tente procurar no próprio site https://lyrics.ovh/');
+    }
+    break;
+}
+
+
+      const axios = require('axios');
+
+case 'tiktok':
+case 'tiktocaudio':
+case 'tiktokvideo':
+case 'tiktoks':
+case 'tiktoksearch':
+case 'ttk':
+case 'tkk':
+  try {
+    if (!q) return reply('📝 Digite o nome ou o link do vídeo do TikTok!');
+
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execPromise = promisify(exec);
+    const fs = await import('fs');
+    const path = await import('path');
+    const axios = (await import('axios')).default;
+
+    let searchInput = q.trim();
+    let videoData = null;
+
+    reply('🔍 *Processando vídeo do TikTok...*');
+
+    const isTikTokUrl = /(tiktok\.com|vt\.tiktok\.com|vm\.tiktok\.com)/i.test(searchInput);
+
+    // 1. Obter dados e links diretos via TikWm
+    if (!isTikTokUrl) {
+      const searchRes = await axios.post('https://www.tikwm.com/api/feed/search', new URLSearchParams({
+        keywords: searchInput,
+        count: 1
+      }));
+
+      const videos = searchRes.data?.data?.videos;
+      if (!videos || videos.length === 0) return reply('❌ NENHUM VÍDEO ENCONTRADO.');
+      videoData = videos[0];
+    } else {
+      const infoRes = await axios.post('https://www.tikwm.com/api/', new URLSearchParams({ url: searchInput }));
+      videoData = infoRes.data?.data;
+    }
+
+    if (!videoData || (!videoData.play && !videoData.wmplay)) {
+      return reply('❌ Não foi possível extrair o vídeo do TikTok.');
+    }
+
+    const videoTitle = videoData.title || 'Vídeo do TikTok';
+    const authorName = videoData.author?.nickname || 'TikTok User';
+    const coverUrl = videoData.cover ? (videoData.cover.startsWith('http') ? videoData.cover : `https://www.tikwm.com${videoData.cover}`) : null;
+    const directVideoUrl = videoData.play ? (videoData.play.startsWith('http') ? videoData.play : `https://www.tikwm.com${videoData.play}`) : null;
+
+    // Exibe o Card Informativo
+    if (coverUrl) {
+      const caption = `🎵 *Conteúdo Encontrado (TikTok)* 🎵\n\n📌 *Título:* ${videoTitle}\n👤 *Autor:* ${authorName}\n\n⏳ *Baixando o Áudio e o Vídeo localmente...*`;
+      await chimu.sendMessage(from, { image: { url: coverUrl }, caption }, { quoted: info });
+    } else {
+      await reply('⏳ Baixando o Áudio e o Vídeo localmente, aguarde...');
+    }
+
+
+// Aponta dinamicamente para a pasta DirTemp a partir do diretório onde este arquivo está
+const dirTemp = path.join(__dirname, 'dados', 'src', 'DirTemp');
+
+    if (!fs.existsSync(dirTemp)) {
+      fs.mkdirSync(dirTemp, { recursive: true });
+    }
+
+    const timestamp = Date.now();
+    const rawVideoPath = path.join(dirTemp, `tt_raw_${timestamp}.mp4`);
+    const audioPath = path.join(dirTemp, `tt_audio_${timestamp}.mp3`);
+
+    // Download do arquivo de vídeo bruto diretamente para o DirTemp
+    const videoStreamResponse = await axios({
+      method: 'get',
+      url: directVideoUrl,
+      responseType: 'arraybuffer'
+    });
+
+    fs.writeFileSync(rawVideoPath, videoStreamResponse.data);
+
+    // 1️⃣ ETAPA: Converte o vídeo salvo para ÁUDIO (MP3) localmente via FFmpeg
+    const cmdConvertAudio = `ffmpeg -y -i "${rawVideoPath}" -vn -ar 44100 -ac 2 -b:a 192k "${audioPath}"`;
+    await execPromise(cmdConvertAudio);
+
+    if (fs.existsSync(audioPath)) {
+      const audioBuffer = fs.readFileSync(audioPath);
+      fs.unlinkSync(audioPath); // Limpa o áudio temporário
+
+      await chimu.sendMessage(from, {
+        audio: audioBuffer,
+        mimetype: 'audio/mpeg'
+      }, { quoted: info });
+    }
+
+    // 2️⃣ ETAPA: Envia o VÍDEO COMPLETO (MP4) salvo em DirTemp
+    if (fs.existsSync(rawVideoPath)) {
+      const videoBuffer = fs.readFileSync(rawVideoPath);
+      fs.unlinkSync(rawVideoPath); // Limpa o vídeo temporário
+
+      await chimu.sendMessage(from, {
+        video: videoBuffer,
+        mimetype: 'video/mp4',
+        caption: `🎥 *${videoTitle}*`
+      }, { quoted: info });
+    }
+
+    return;
+
+  } catch (error) {
+    console.error('Erro no processamento local do TikTok:', error);
+    reply('❌ Falha ao processar e converter os arquivos localmente.');
+  }
+  break;
+      
+      
+      
+      
+      
       case 'facebook':
       case 'fb':
       case 'fbdl':
@@ -19931,7 +19710,7 @@ ${prefix}addsubbot @152656307871952`
                 `\n📥 *Enviando vídeo...*`;
 
               try {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   image: { url: result.thumbnail },
                   caption
                 }, { quoted: info });
@@ -19940,7 +19719,7 @@ ${prefix}addsubbot @152656307871952`
               }
 
               try {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   video: result.buffer,
                   mimetype: 'video/mp4',
                   fileName: result.filename
@@ -19948,7 +19727,7 @@ ${prefix}addsubbot @152656307871952`
               } catch (videoError) {
                 if (String(videoError).includes("ENOSPC") || String(videoError).includes("size")) {
                   await reply('📦 Vídeo muito grande, enviando como documento...');
-                  await nazu.sendMessage(from, {
+                  await chimu.sendMessage(from, {
                     document: result.buffer,
                     fileName: result.filename,
                     mimetype: 'video/mp4'
@@ -19969,81 +19748,151 @@ ${prefix}addsubbot @152656307871952`
           reply("❌ Ocorreu um erro ao processar sua solicitação.");
         }
         break;
-
       case 'instagram':
-      case 'igdl':
-      case 'ig':
-      case 'instavideo':
-      case 'igstory':
+case 'insta':
+  try {
+    if (!q) return reply('📝 Digite o link do conteúdo do Instagram!');
+
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execPromise = promisify(exec);
+    const fs = await import('fs');
+    const path = await import('path');
+
+    let urlInput = q.trim();
+    if (!urlInput.startsWith('http://') && !urlInput.startsWith('https://')) {
+      urlInput = 'https://' + urlInput;
+    }
+
+    reply('🔍 *Processando link do Instagram via yt-dlp local...*');
+
+    // Aponta dinamicamente para a pasta DirTemp a partir do diretório onde este arquivo está
+const dirTemp = path.join(__dirname, 'dados', 'src', 'DirTemp');
+
+    if (!fs.existsSync(dirTemp)) {
+      fs.mkdirSync(dirTemp, { recursive: true });
+    }
+
+    const timestamp = Date.now();
+    const outputTemplate = path.join(dirTemp, `ig_${timestamp}_%(no)s.%(ext)s`);
+
+    reply('⏳ *Baixando conteúdo do Instagram...*');
+
+    // 1️⃣ Tentativa 1: Baixar Vídeo / Reels + Legenda
+    let downloadFailed = false;
+    const ytDlpVideoCmd = `yt-dlp --no-warnings --no-playlist --write-description -o "${outputTemplate}" "${urlInput}"`;
+
+    try {
+      await execPromise(ytDlpVideoCmd);
+    } catch (err) {
+      downloadFailed = true;
+    }
+
+    // 2️⃣ Tentativa 2 (Fallback): Se for FOTO / CARROSSEL, baixa as thumbnails/imagens + descrição
+    if (downloadFailed) {
+      const imgTemplate = path.join(dirTemp, `ig_${timestamp}_%(no)s`);
+      const ytDlpImgCmd = `yt-dlp --no-warnings --no-playlist --skip-download --write-thumbnail --write-description --convert-thumbnails jpg -o "${imgTemplate}" "${urlInput}"`;
+      
+      try {
+        await execPromise(ytDlpImgCmd);
+      } catch (errImg) {
+        console.error('Erro ao tentar extrair imagem com yt-dlp:', errImg);
+      }
+    }
+
+    const allFiles = fs.readdirSync(dirTemp);
+
+    // 3. Procura e lê a legenda enviada no post
+    let postCaption = '🎥 *Instagram Media*';
+    const descFile = allFiles.find(file => file.startsWith(`ig_${timestamp}_`) && file.endsWith('.description'));
+
+    if (descFile) {
+      const descPath = path.join(dirTemp, descFile);
+      const rawDesc = fs.readFileSync(descPath, 'utf-8').trim();
+      fs.unlinkSync(descPath);
+
+      if (rawDesc) {
+        postCaption = `📝 *Legenda:*\n${rawDesc}`;
+      }
+    }
+
+    // 4. Filtra todas as mídias baixadas
+    const mediaFiles = allFiles.filter(file => 
+      file.startsWith(`ig_${timestamp}_`) && !file.endsWith('.description')
+    );
+
+    if (mediaFiles.length === 0) {
+      return reply('❌ Nenhuma mídia (vídeo ou foto) foi encontrada no link fornecido.');
+    }
+
+    for (const file of mediaFiles) {
+      const filePath = path.join(dirTemp, file);
+      const ext = path.extname(file).toLowerCase();
+
+      // Caso seja VÍDEO
+      if (['.mp4', '.webm', '.mkv', '.mov'].includes(ext)) {
+        const rawVideoPath = filePath;
+        const audioPath = path.join(dirTemp, `ig_audio_${timestamp}_${Math.random().toString(36).substring(7)}.mp3`);
+
+        // Extrai o áudio para MP3 via FFmpeg
+        const cmdConvertAudio = `ffmpeg -y -i "${rawVideoPath}" -vn -ar 44100 -ac 2 -b:a 192k "${audioPath}"`;
+        
         try {
-          if (!q) return reply(`Digite um link do Instagram.\n> Ex: ${prefix}${command} https://www.instagram.com/reel/DFaq_X7uoiT/?igsh=M3Q3N2ZyMWU1M3Bo`);
+          await execPromise(cmdConvertAudio);
 
-          reply('Aguarde um momentinho... ☀️');
+          if (fs.existsSync(audioPath)) {
+            const audioBuffer = fs.readFileSync(audioPath);
+            fs.unlinkSync(audioPath);
 
-          igdl.dl(q)
-            .then(async (datinha) => {
-
-              if (!datinha.ok) return reply(datinha.msg);
-
-              for (const item of datinha.data) {
-
-                await nazu.sendMessage(from, {
-                  [item.type]: {
-                    url: item.url
-                  }
-                }, {
-                  quoted: info
-                });
-
-              }
-
-            })
-            .catch(async (e) => {
-
-              console.error('Erro no comando Instagram (promise):', e);
-
-              reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
-
-            });
-
-          return;
-
-        } catch (e) {
-
-          console.error('Erro no comando Instagram:', e);
-
-          reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
-
+            await chimu.sendMessage(from, {
+              audio: audioBuffer,
+              mimetype: 'audio/mpeg'
+            }, { quoted: info });
+          }
+        } catch (errAudio) {
+          console.error('Erro ao converter áudio com FFmpeg:', errAudio);
         }
-        break;
-      case 'kwai':
-        try {
-          if (!q) return reply(`Digite um link do kwai.\n> Ex: ${prefix}${command} https://kwai-video.com/p/q0fr2CRm`);
 
+        // Envia o VÍDEO
+        if (fs.existsSync(rawVideoPath)) {
+          const videoBuffer = fs.readFileSync(rawVideoPath);
+          fs.unlinkSync(rawVideoPath);
 
-          reply('Aguarde um momentinho... ☀️');
-          kwai.dl(q)
-            .then(async (datinha) => {
-              if (!datinha.ok) return reply(datinha.msg);
-
-              for (const item of datinha.data) {
-                await nazu.sendMessage(from, {
-                  [item.type]: item.buff
-                }, {
-                  quoted: info
-                });
-              }
-            })
-            .catch(async (e) => {
-              console.error('Erro no comando Kwai (promise):', e);
-              reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
-            });
-          return;
-        } catch (e) {
-          console.error('Erro no comando Kwai:', e);
-          reply("❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.");
+          await chimu.sendMessage(from, {
+            video: videoBuffer,
+            mimetype: 'video/mp4',
+            caption: `🎥 *Vídeo/Reels do Instagram*\n\n${postCaption}`
+          }, { quoted: info });
         }
-        break;
+
+      } else if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+        // Caso seja IMAGEM / FOTO
+        if (fs.existsSync(filePath)) {
+          const imgBuffer = fs.readFileSync(filePath);
+          fs.unlinkSync(filePath);
+
+          await chimu.sendMessage(from, {
+            image: imgBuffer,
+            caption: `📸 *Imagem do Instagram*\n\n${postCaption}`
+          }, { quoted: info });
+        }
+      } else {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    }
+
+    return;
+
+  } catch (error) {
+    console.error('Erro no processamento local do Instagram:', error);
+    reply('❌ Falha ao processar o conteúdo do Instagram.');
+  }
+  break;
+      
+      
+      
       case 'gdrive':
       case 'googledrive':
       case 'drive':
@@ -20073,7 +19922,7 @@ ${prefix}addsubbot @152656307871952`
           if (fileSizeBytes > maxSize) {
             const shortLinkGdrive = await axios.post("https://spoo.me/api/v1/shorten", {
               long_url: downloadUrl,
-              alias: `nazuna_${Math.floor(10000 + Math.random() * 90000)}`
+              alias: `TheChimasBot_${Math.floor(10000 + Math.random() * 90000)}`
             });
             return reply(`📁 *Arquivo encontrado!*\n\n📄 *Nome:* ${fileName}\n📊 *Tamanho:* ${fileSize}\n📋 *Tipo:* ${mimetype}\n\n⚠️ *Arquivo muito grande para enviar!*\nO limite do WhatsApp é 100MB.\n\n🔗 *Link direto:*\n${shortLinkGdrive.data.short_url}`);
           }
@@ -20094,26 +19943,26 @@ ${prefix}addsubbot @152656307871952`
 
           // Determinar o tipo de mídia e enviar
           if (mimetype.startsWith('image/')) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               image: fileBuffer,
               caption: `📁 *${fileName}*\n📊 Tamanho: ${fileSize}`,
               mimetype: mimetype
             }, { quoted: info });
           } else if (mimetype.startsWith('video/')) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               video: fileBuffer,
               caption: `📁 *${fileName}*\n📊 Tamanho: ${fileSize}`,
               mimetype: mimetype
             }, { quoted: info });
           } else if (mimetype.startsWith('audio/')) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               audio: fileBuffer,
               mimetype: mimetype,
               ptt: false
             }, { quoted: info });
           } else {
             // Enviar como documento para outros tipos
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               document: fileBuffer,
               fileName: fileName,
               mimetype: mimetype,
@@ -20170,7 +20019,7 @@ ${prefix}addsubbot @152656307871952`
           if (fileSizeBytes > maxSize) {
             const shortLinkMf = await axios.post("https://spoo.me/api/v1/shorten", {
               long_url: downloadUrl,
-              alias: `nazuna_${Math.floor(10000 + Math.random() * 90000)}`
+              alias: `TheChimasBot_${Math.floor(10000 + Math.random() * 90000)}`
             });
             return reply(`📁 *Arquivo encontrado!*\n\n📄 *Nome:* ${fileName}\n📊 *Tamanho:* ${fileSize}\n📅 *Upload:* ${uploadDate || 'N/A'}\n📋 *Tipo:* ${extension || mimetype}\n\n⚠️ *Arquivo muito grande para enviar!*\nO limite do WhatsApp é 100MB.\n\n🔗 *Link direto:*\n${shortLinkMf.data.short_url}`);
           }
@@ -20192,26 +20041,26 @@ ${prefix}addsubbot @152656307871952`
 
           // Determinar o tipo de mídia e enviar
           if (mimeType.startsWith('image/')) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               image: fileBuffer,
               caption: `📁 *${fileName}*\n📊 Tamanho: ${fileSize}`,
               mimetype: mimeType
             }, { quoted: info });
           } else if (mimeType.startsWith('video/')) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               video: fileBuffer,
               caption: `📁 *${fileName}*\n📊 Tamanho: ${fileSize}`,
               mimetype: mimeType
             }, { quoted: info });
           } else if (mimeType.startsWith('audio/')) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               audio: fileBuffer,
               mimetype: mimeType,
               ptt: false
             }, { quoted: info });
           } else {
             // Enviar como documento para outros tipos
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               document: fileBuffer,
               fileName: fileName,
               mimetype: mimeType,
@@ -20269,20 +20118,20 @@ ${prefix}addsubbot @152656307871952`
                 // Usar a melhor qualidade disponível
                 const videoUrl = item.bestQuality?.url || item.url;
 
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   video: { url: videoUrl },
                   caption: caption,
                   mimetype: 'video/mp4'
                 }, { quoted: info });
 
               } else if (item.type === 'photo' || item.type === 'image') {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   image: { url: item.url },
                   caption: caption
                 }, { quoted: info });
 
               } else if (item.type === 'gif' || item.type === 'animated_gif') {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   video: { url: item.url },
                   caption: caption,
                   gifPlayback: true
@@ -20353,7 +20202,7 @@ Se não definir cores:
             return reply(datinha?.msg || 'Erro ao gerar o sticker Brat. 😕');
           }
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             sticker: { url: datinha.url },
             mimetype: 'image/webp'
           }, { quoted: info });
@@ -20418,7 +20267,7 @@ Se não definir cores, a API usa padrão automaticamente.`
             return reply(datinha?.msg || 'Erro ao gerar o sticker animado Brat. 😕');
           }
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             sticker: { url: datinha.url },
             mimetype: 'image/webp'
           }, { quoted: info });
@@ -20479,11 +20328,11 @@ Se não definir cores, a API usa padrão automaticamente.`
             );
           }
 
-          await nazu.sendMessage(
+          await chimu.sendMessage(
             from,
             {
               document: zipBuffer,
-              fileName: 'nazuna-bot.zip',
+              fileName: 'TheChimasBot-bot.zip',
               mimetype: 'application/zip',
               caption:
                 `📦 *Código-fonte do ${nomebot}*\n\n` +
@@ -20585,7 +20434,7 @@ Se não definir cores, a API usa padrão automaticamente.`
 │ 🔄 *Atualizado:* ${updatedAt}
 │ 📤 *Último push:* ${pushedAt}
 │
-│ ⏱️ *Nazuna vem sendo ativamente*
+│ ⏱️ *TheChimasBot vem sendo ativamente*
 │ *mantida há:* ${tempoAtivo}
 │
 │ 🔗 *Links:*
@@ -20663,7 +20512,7 @@ Se não definir cores, a API usa padrão automaticamente.`
             const audioPath = getMenuAudioPath();
             if (audioPath && fs.existsSync(audioPath)) {
               const audioBuffer = fs.readFileSync(audioPath);
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 audio: audioBuffer,
                 mimetype: 'audio/mpeg',
                 ptt: false
@@ -20671,7 +20520,7 @@ Se não definir cores, a API usa padrão automaticamente.`
                 quoted: info
               }).then(async () => {
                 // Depois envia o menu
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   [useVideo ? 'video' : 'image']: mediaBuffer,
                   caption: lerMaisPrefix + menuText,
                   gifPlayback: useVideo,
@@ -20682,7 +20531,7 @@ Se não definir cores, a API usa padrão automaticamente.`
               });
             } else {
               // Se não tem áudio válido, envia só o menu
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 [useVideo ? 'video' : 'image']: mediaBuffer,
                 caption: lerMaisPrefix + menuText,
                 gifPlayback: useVideo,
@@ -20693,7 +20542,7 @@ Se não definir cores, a API usa padrão automaticamente.`
             }
           } else {
             // Se áudio não está ativo, envia só o menu
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               [useVideo ? 'video' : 'image']: mediaBuffer,
               caption: lerMaisPrefix + menuText,
               gifPlayback: useVideo,
@@ -20719,76 +20568,6 @@ Se não definir cores, a API usa padrão automaticamente.`
         } catch (error) {
           console.error('Erro ao enviar menu de alteradores:', error);
           await reply("❌ Ocorreu um erro ao carregar o menu de alteradores");
-        }
-        break;
-
-      case 'menulogo':
-      case 'menulogos':
-        try {
-          await sendMenuWithMedia('logotipos', menuLogos);
-        } catch (error) {
-          console.error('Erro ao enviar menu de Logos:', error);
-          await reply("❌ Ocorreu um erro ao carregar o menu de Logos");
-        }
-        break;
-
-      case 'nazuna':
-        try {
-          const lerMaisPrefix = getMenuLerMaisText();
-          const cleanLink = 'https://nubank.com.br/cobrar/133oy9/6a39d128-5419-4b04-a105-b7bd2d290c65';
-
-          const texto =
-            `🍓 *NAZUNA BOT*
-
-Nazuna é um bot de alta performance no whatsapp
-
-Um bot open source e de uso gratuito para todos usuários
-
-com atualização constante sempre inovando
-
-Desenvolvida e atualizada pelo DevTokyo${lerMaisPrefix}
-Repositorio: https://github.com/${config.autor}/${config.repositorio}
-${lerMaisPrefix}
-☁️ *Hospedagem oficial*
-https://vexhost.com.br
-${lerMaisPrefix}
-🔑 *API oficial da nazuna bot*
-https://vexapi.com.br
-${lerMaisPrefix}
-📞 *Dev Tokyo:*
-wa.me/553285076326
-
-Responde em até 24 horas
-${lerMaisPrefix}
-
-💶 *Incentive o desenvolvimento da nazuna bot*
-${cleanLink}
-`;
-
-          const imgPath = __dirname + '/../midias/menu.jpg';
-
-          if (!fs.existsSync(imgPath)) {
-            return reply("❌ Imagem do menu não encontrada. Defina ela primeiro.");
-          }
-
-          await nazu.sendMessage(from, {
-            image: fs.readFileSync(imgPath),
-            caption: texto
-          }, { quoted: info });
-
-        } catch (error) {
-          console.error('Erro ao enviar menu Nazuna:', error);
-          reply("❌ Ocorreu um erro ao carregar o menu Nazuna");
-        }
-        break;
-
-      case 'edits':
-      case 'menuedits':
-        try {
-          await sendMenuWithMedia('menuedits', menuedits);
-        } catch (error) {
-          console.error('Erro ao enviar menu de Logos:', error);
-          await reply("❌ Ocorreu um erro ao carregar o menu de Logos");
         }
         break;
 
@@ -21041,7 +20820,7 @@ Exemplo: ${prefix}msgprefix Use #prefixo# antes do comando!
 
 🔹 *Nome do Bot*
 Use: ${prefix}nomebot <nome>
-Exemplo: ${prefix}nomebot Nazuna
+Exemplo: ${prefix}nomebot TheChimasBot
 • Altera o nome exibido nos menus
 • Use nomes curtos e memoráveis
 
@@ -21657,7 +21436,7 @@ Precisa de ajuda? Entre em contato:
 
           const lerMaisPrefix = getMenuLerMaisText();
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             [useVideo ? 'video' : 'image']: mediaBuffer,
             caption: lerMaisPrefix + menuText,
             gifPlayback: useVideo,
@@ -21733,7 +21512,7 @@ Precisa de ajuda? Entre em contato:
           if (!isOwner) return reply("Este comando é apenas para o meu dono 💔");
           if (!q || !q.includes('chat.whatsapp.com')) return reply('Digite um link de convite válido! Exemplo: ' + prefix + 'entrar https://chat.whatsapp.com/...');
           const code = q.split('https://chat.whatsapp.com/')[1];
-          await nazu.groupAcceptInvite(code).then(res => {
+          await chimu.groupAcceptInvite(code).then(res => {
             reply(`✅ Entrei no grupo com sucesso!`);
           }).catch(err => {
             reply('❌ Erro ao entrar no grupo. Link inválido ou permissão negada.');
@@ -21769,7 +21548,7 @@ Precisa de ajuda? Entre em contato:
 
           // Tenta obter informações do grupo para confirmar
           try {
-            const groupMetadata = await nazu.groupMetadata(groupId).catch(() => null);
+            const groupMetadata = await chimu.groupMetadata(groupId).catch(() => null);
             if (!groupMetadata) {
               return reply('❌ Grupo não encontrado ou não tenho acesso a ele.');
             }
@@ -21777,11 +21556,11 @@ Precisa de ajuda? Entre em contato:
             const groupName = groupMetadata.subject || 'Grupo desconhecido';
 
             // Sai do grupo
-            await nazu.groupLeave(groupId);
+            await chimu.groupLeave(groupId);
             await reply(`✅ Sai do grupo "${groupName}" com sucesso!`);
           } catch (error) {
             // Tenta sair mesmo assim
-            await nazu.groupLeave(groupId).catch(() => { });
+            await chimu.groupLeave(groupId).catch(() => { });
             await reply(`✅ Comando de saída executado para o grupo ${groupId}`);
           }
         } catch (e) {
@@ -21846,7 +21625,7 @@ Precisa de ajuda? Entre em contato:
             };
           }
 
-          const groups = await nazu.groupFetchAllParticipating();
+          const groups = await chimu.groupFetchAllParticipating();
           const totalGroups = Object.keys(groups).length;
           let enviados = 0;
 
@@ -21862,7 +21641,7 @@ Precisa de ajuda? Entre em contato:
                 message.text = `${message.text}\n\n> ID: ${suffix}`;
               }
 
-              await nazu.sendMessage(group.id, message);
+              await chimu.sendMessage(group.id, message);
               enviados++;
 
               if (enviados < totalGroups) {
@@ -22005,7 +21784,7 @@ Precisa de ajuda? Entre em contato:
                 message.text = `${message.text}\n\n> ID: ${suffix}`;
               }
 
-              await nazu.sendMessage(subscriber.id, message);
+              await chimu.sendMessage(subscriber.id, message);
               enviados++;
 
               // Incrementa contador de mensagens recebidas pelo usuário
@@ -22140,7 +21919,7 @@ Precisa de ajuda? Entre em contato:
           if (!q) return reply('❌ Digite o nome do comando. Exemplo: ' + prefix + 'getcase menu');
           var caseCode;
           caseCode = (fs.readFileSync(__dirname + "/index.js", "utf-8").match(new RegExp(`case\\s*["'\`]${q}["'\`]\\s*:[\\s\\S]*?break\\s*;?`, "i")) || [])[0];
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             document: Buffer.from(caseCode, 'utf-8'),
             mimetype: 'text/plain',
             fileName: `${q}.txt`
@@ -22388,7 +22167,7 @@ Precisa de ajuda? Entre em contato:
       case 'seradm':
         try {
           if (!isOwner) return reply("Este comando é apenas para o meu dono");
-          await nazu.groupParticipantsUpdate(from, [sender], "promote");
+          await chimu.groupParticipantsUpdate(from, [sender], "promote");
         } catch (e) {
           console.error(e);
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
@@ -22397,7 +22176,7 @@ Precisa de ajuda? Entre em contato:
       case 'sermembro':
         try {
           if (!isOwner) return reply("Este comando é apenas para o meu dono");
-          await nazu.groupParticipantsUpdate(from, [sender], "demote");
+          await chimu.groupParticipantsUpdate(from, [sender], "demote");
         } catch (e) {
           console.error(e);
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
@@ -22593,7 +22372,7 @@ ${prefix}${command} 1a0b5879-bc22-4f4a
       case 'nome-bot':
         try {
           if (!isOwner) return reply("Este comando é exclusivo para o meu dono!");
-          if (!q) return reply(`Por favor, digite o novo nome do bot.\nExemplo: ${prefix}${command} Nazuna`);
+          if (!q) return reply(`Por favor, digite o novo nome do bot.\nExemplo: ${prefix}${command} TheChimasBot`);
           let config = JSON.parse(fs.readFileSync(CONFIG_FILE));
           config.nomebot = q;
           writeJsonFile(CONFIG_FILE, config);
@@ -22721,7 +22500,7 @@ ${prefix}${command} 1a0b5879-bc22-4f4a
           try {
             // Processa a imagem com ffmpeg antes de atualizar
             const processedBuffer = await processImageForProfile(imageBuffer);
-            await nazu.updateProfilePicture(nazu.user.id, processedBuffer);
+            await chimu.updateProfilePicture(chimu.user.id, processedBuffer);
             reply('✅ Foto de perfil do bot alterada com sucesso!');
           } catch (updateError) {
             console.error('Erro ao alterar foto de perfil:', updateError);
@@ -23134,7 +22913,7 @@ ${prefix}${command} 1a0b5879-bc22-4f4a
       case 'listgp':
         try {
           if (!isOwner) return reply('⛔ Desculpe, este comando é exclusivo para o meu dono!');
-          const getGroups = await nazu.groupFetchAllParticipating();
+          const getGroups = await chimu.groupFetchAllParticipating();
           const groups = Object.entries(getGroups).slice(0).map(entry => entry[1]);
           const sortedGroups = groups.sort((a, b) => a.subject.localeCompare(b.subject));
           let teks = `🌟 *Lista de Grupos e Comunidades* 🌟\n📊 *Total de Grupos:* ${sortedGroups.length}\n\n`;
@@ -23206,7 +22985,7 @@ ${prefix}${command} 1a0b5879-bc22-4f4a
           if (!menc_os2) return reply("Marque alguém 🙄");
           if (!!premiumListaZinha[menc_os2]) return reply('O usuário ja esta na lista premium.');
           premiumListaZinha[menc_os2] = true;
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `✅ @${getUserName(menc_os2)} foi adicionado(a) a lista premium.`,
             mentions: [menc_os2]
           }, {
@@ -23227,7 +23006,7 @@ ${prefix}${command} 1a0b5879-bc22-4f4a
           if (!menc_os2) return reply("Marque alguém 🙄");
           if (!premiumListaZinha[menc_os2]) return reply('O usuário não esta na lista premium.');
           delete premiumListaZinha[menc_os2];
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `🫡 @${getUserName(menc_os2)} foi removido(a) da lista premium.`,
             mentions: [menc_os2]
           }, {
@@ -23246,7 +23025,7 @@ ${prefix}${command} 1a0b5879-bc22-4f4a
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
           if (!!premiumListaZinha[from]) return reply('O grupo ja esta na lista premium.');
           premiumListaZinha[from] = true;
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `✅ O grupo foi adicionado a lista premium.`
           }, {
             quoted: info
@@ -23266,7 +23045,7 @@ ${prefix}${command} 1a0b5879-bc22-4f4a
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
           if (!premiumListaZinha[from]) return reply('O grupo não esta na lista premium.');
           delete premiumListaZinha[from];
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `🫡 O grupo foi removido da lista premium.`
           }, {
             quoted: info
@@ -23317,7 +23096,7 @@ ${prefix}${command} 1a0b5879-bc22-4f4a
 
             teks += `   Nenhum grupo premium encontrado.\n`;
           }
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: teks,
             mentions: usersPremium
           }, {
@@ -23340,7 +23119,7 @@ ${prefix}${command} 1a0b5879-bc22-4f4a
           targetData.bank = 0;
           saveEconomy(econ);
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `🧹 @${getUserName(menc_os2)} teve o gold resetado (carteira e banco).`,
             mentions: [menc_os2]
           }, {
@@ -23730,7 +23509,7 @@ ${prefix}togglecmdvip premium_ia off`);
 
           writeJsonFile(indicacoesFile, indicacoesData);
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `✅ *Indicação adicionada com sucesso!*\n\n👤 @${getUserName(menc_os2)} agora tem *${indicacoesData.users[menc_os2].count}* indicação(ões)! 🎉`,
             mentions: [menc_os2]
           }, { quoted: info });
@@ -23776,7 +23555,7 @@ ${prefix}togglecmdvip premium_ia off`);
 
           const mentions = usersArray.slice(0, maxShow).map(u => u.userId);
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: mensagem,
             mentions: mentions
           }, { quoted: info });
@@ -23817,7 +23596,7 @@ ${prefix}togglecmdvip premium_ia off`);
             ? `✅ Removidas *${Math.min(parseInt(q), countBefore)}* indicação(ões) de @${getUserName(menc_os2)}!\n\n📊 Total restante: *${indicacoesData.users[menc_os2]?.count || 0}*`
             : `✅ Todas as indicações de @${getUserName(menc_os2)} foram removidas! (Total: *${countBefore}*)`;
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: finalMsg,
             mentions: [menc_os2]
           }, { quoted: info });
@@ -23825,113 +23604,6 @@ ${prefix}togglecmdvip premium_ia off`);
         } catch (e) {
           console.error('Erro no comando delindicacao:', e);
           reply("❌ Ocorreu um erro ao remover a indicação.");
-        }
-        break;
-
-      //COMANDOS DE LOGOS
-      case 'amongus':
-      case 'royal':
-      case 'mascotemetal':
-      case 'firework':
-      case 'summerbeach':
-      case 'cloudsky':
-      case 'techstyle':
-      case 'watercolor':
-      case 'ligatures':
-      case 'graffitistyle':
-      case 'frozen':
-      case 'colorful':
-      case 'balloon':
-      case 'multicolor':
-      case 'metal':
-      case 'doubleexposure':
-      case 'mascoteneon':
-      case 'eraser':
-      case 'america':
-      case 'snow':
-      case 'sunset':
-      case 'halloween':
-      case 'blood':
-      case 'hallobat':
-      case 'cemiterio':
-      case 'ffavatar':
-      case 'vintage3d':
-      case 'hollywood':
-      case 'glitch':
-      case 'galaxy':
-      case 'glossy':
-      case 'dragonfire':
-      case 'pubgavatar':
-      case 'comics':
-        try {
-          if (!q) return reply(`❌ Cadê o texto?\nExemplo: .${command} Olá Mundo`);
-
-          await reply(`⏳ Gerando logotipo... aguarde! ☀️`);
-
-          const resultado = await logos.gerarLogo({ query: q, type: command });
-
-          if (!resultado || typeof resultado === 'string') {
-            return reply(resultado || '❌ Erro desconhecido');
-          }
-
-          if (!resultado.ok) {
-            return reply(`${resultado.msg}`);
-          }
-
-          if (!resultado.buffer) {
-            return reply('❌ Não foi possível gerar o logotipo');
-          }
-
-          await nazu.sendMessage(from, {
-            image: resultado.buffer,
-            caption: `✅ Logotipo gerado com sucesso!`
-          }, { quoted: info });
-
-        } catch (e) {
-          console.error(`Erro no comando ${command}:`, e);
-          await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
-        }
-        break;
-      case 'pornhub':
-      case 'avengers':
-      case 'deadpool':
-      case 'avengers':
-      case 'marvel':
-
-        try {
-          const [texto1, texto2] = q.split('/').map(i => i.trim());
-          if (!texto1 || !texto2) {
-            return reply(`❌ Cadê os textos?\nExemplo: ${prefix + command} Nazuna/Bot`);
-          }
-
-          await reply(`⏳ Gerando logotipo... aguarde! ☀️`);
-
-          const resultado = await logos.gerarLogo2({
-            query: texto1,
-            query2: texto2,
-            type: command
-          });
-
-          if (!resultado || typeof resultado === 'string') {
-            return reply(resultado || '❌ Erro desconhecido');
-          }
-
-          if (!resultado.ok) {
-            return reply(`${resultado.msg}`);
-          }
-
-          if (!resultado.buffer) {
-            return reply('❌ Não foi possível gerar o logotipo');
-          }
-
-          await nazu.sendMessage(from, {
-            image: resultado.buffer,
-            caption: `✅ Logotipo gerado com sucesso!`
-          }, { quoted: info });
-
-        } catch (e) {
-          console.error(`Erro no comando ${command}:`, e);
-          await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
         }
         break;
       //comandos de edits
@@ -23976,7 +23648,7 @@ ${prefix}togglecmdvip premium_ia off`);
             return reply('❌ Não foi possível gerar o logotipo.');
           }
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             image: resultado.buffer,
             caption: '✅ Edição aplicada com sucesso!'
           }, { quoted: info });
@@ -24004,7 +23676,7 @@ ${prefix}togglecmdvip premium_ia off`);
             px.video = {
               url: px.url
             };
-            await nazu.sendMessage(from, px, {
+            await chimu.sendMessage(from, px, {
               quoted: info
             });
           } else if (boij22) {
@@ -24013,7 +23685,7 @@ ${prefix}togglecmdvip premium_ia off`);
             px.image = {
               url: px.url
             };
-            await nazu.sendMessage(from, px, {
+            await chimu.sendMessage(from, px, {
               quoted: info
             });
           } else if (boij33) {
@@ -24022,7 +23694,7 @@ ${prefix}togglecmdvip premium_ia off`);
             px.audio = {
               url: px.url
             };
-            await nazu.sendMessage(from, px, {
+            await chimu.sendMessage(from, px, {
               quoted: info
             });
           } else {
@@ -24036,7 +23708,7 @@ ${prefix}togglecmdvip premium_ia off`);
       case 'limpardb':
         try {
           if (!isOwner) return reply("Apenas o dono pode limpar o banco de dados.");
-          const allGroups = await nazu.groupFetchAllParticipating();
+          const allGroups = await chimu.groupFetchAllParticipating();
           const currentGroupIds = Object.keys(allGroups);
           const groupFiles = fs.readdirSync(GRUPOS_DIR).filter(file => file.endsWith('.json'));
           let removedCount = 0;
@@ -24375,7 +24047,7 @@ ${prefix}togglecmdvip premium_ia off`);
               }
             }
           }
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: blad,
             mentions: menc
           }, {
@@ -24446,7 +24118,7 @@ ${prefix}togglecmdvip premium_ia off`);
               menc.push(blue67[i6].id);
             }
           }
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: blad,
             mentions: menc
           }, {
@@ -24562,7 +24234,7 @@ ${prefix}togglecmdvip premium_ia off`);
             }
           });
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: activityMessage,
             mentions: mentions
           }, {
@@ -24579,7 +24251,7 @@ ${prefix}togglecmdvip premium_ia off`);
           fs.readFile(__dirname + '/index.js', 'utf8', async (err, data) => {
             if (err) throw err;
             const comandos = [...data.matchAll(/case [`'"](\w+)[`'"]/g)].map(m => m[1]);
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: `╭〔 🤖 *Meus Comandos* 〕╮\n` + `┣ 📌 Total: *${comandos.length}* comandos\n` + `╰━━━━━━━━━━━━━━━╯`
             }, {
               quoted: info
@@ -24626,11 +24298,11 @@ ${prefix}togglecmdvip premium_ia off`);
           const userStatus = isOwner ? 'Dono' : isPremium ? 'Premium' : isGroupAdmin ? 'Admin' : 'Membro';
           let profilePic = null;
           try {
-            profilePic = await nazu.profilePictureUrl(sender, 'image');
+            profilePic = await chimu.profilePictureUrl(sender, 'image');
           } catch (e) { }
           const statusMessage = `📊 *Meu Status - ${userName}* 📊\n\n👤 *Nome*: ${userName}\n📱 *Número*: @${getUserName(sender)}\n⭐ *Status*: ${userStatus}\n\n${isGroup ? `\n📌 *No Grupo: ${groupName}*\n💬 Mensagens: ${groupMessages}\n⚒️ Comandos: ${groupCommands}\n🎨 Figurinhas: ${groupStickers}\n` : ''}\n\n🌐 *Geral (Todos os Grupos)*\n💬 Mensagens: ${totalMessages}\n⚒️ Comandos: ${totalCommands}\n🎨 Figurinhas: ${totalStickers}\n\n✨ *Bot*: ${nomebot} by ${nomedono} ✨`;
           if (profilePic) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               image: {
                 url: profilePic
               },
@@ -24640,7 +24312,7 @@ ${prefix}togglecmdvip premium_ia off`);
               quoted: info
             });
           } else {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: statusMessage,
               mentions: [sender]
             }, {
@@ -24849,7 +24521,7 @@ ${prefix}togglecmdvip premium_ia off`);
           const botMemUsage = process.memoryUsage();
           const memUsed = (botMemUsage.heapUsed / 1024 / 1024).toFixed(2);
           const memTotal = (botMemUsage.heapTotal / 1024 / 1024).toFixed(2);
-          const allGroups = await nazu.groupFetchAllParticipating();
+          const allGroups = await chimu.groupFetchAllParticipating();
           const totalGroups = Object.keys(allGroups).length;
           let totalUsers = 0;
           Object.values(allGroups).forEach(group => {
@@ -24907,7 +24579,7 @@ ${prefix}togglecmdvip premium_ia off`);
           const mediaPath = useVideo ? menuVideoPath : menuImagePath;
           const mediaBuffer = fs.readFileSync(mediaPath);
           const menuText = await menuTopCmd(prefix, nomebot, pushname, topCommands);
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             [useVideo ? 'video' : 'image']: mediaBuffer,
             caption: menuText,
             gifPlayback: useVideo,
@@ -24938,7 +24610,7 @@ ${prefix}togglecmdvip premium_ia off`);
           }).join('\n') : 'Nenhum usuário registrado';
           const lastUsed = new Date(stats.lastUsed).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
           const infoMessage = `📊 *Estatísticas do Comando: ${prefix}${stats.name}* 📊\n\n` + `📈 *Total de Usos*: ${stats.count}\n` + `👥 *Usuários Únicos*: ${stats.uniqueUsers}\n` + `🕒 *Último Uso*: ${lastUsed}\n\n` + `🏆 *Top Usuários*:\n${topUsersText}\n\n` + `✨ *Bot*: ${nomebot} by ${nomedono} ✨`;
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: infoMessage,
             mentions: stats.topUsers.map(u => u.userId)
           }, {
@@ -25187,7 +24859,7 @@ ${prefix}togglecmdvip premium_ia off`);
             statusCor = '🟥';
           }
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `╭⊱ ⚡ *STATUS DA CONEXÃO* ⚡ ⊱╮
 │
 │ 📡 *Informações de Latência*
@@ -25220,7 +24892,7 @@ ${prefix}togglecmdvip premium_ia off`);
         try {
           var buff;
           buff = await getFileBuffer(info.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage, 'sticker');
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             image: buff
           }, {
             quoted: info
@@ -25232,8 +24904,8 @@ ${prefix}togglecmdvip premium_ia off`);
 
 
 
-      case 'togif':
-        if (!isQuotedSticker) return reply(`╭━━━⊱ 🎞️ *CONVERTER* 🎞️ ⊱━━━╮
+case 'togif':
+    if (!isQuotedSticker) return reply(`╭━━━⊱ 🎞️ *CONVERTER* 🎞️ ⊱━━━╮
 │
 │ ❌ Marque uma figurinha animada
 │    para converter em GIF!
@@ -25243,58 +24915,100 @@ ${prefix}togglecmdvip premium_ia off`);
 │
 ╰━━━━━━━━━━━━━━━━━━━━━━╯`);
 
-        {
-          const togifTempDir = path.join(__dirname, '../midias/temp_togif_' + Date.now());
+{
+    const togifTempDir = path.join(__dirname, '../midias/temp_togif_' + Date.now());
 
-          try {
-            fs.mkdirSync(togifTempDir, { recursive: true });
+    try {
+        fs.mkdirSync(togifTempDir, { recursive: true });
 
-            const stickerBuffer = await getFileBuffer(
-              info.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage,
-              'image'
-            );
+        const stickerBuffer = await getFileBuffer(
+            info.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage,
+            'image'
+        );
 
-            const inputWebp = path.join(togifTempDir, 'input.webp');
-            const outputGif = path.join(togifTempDir, 'output.gif');
-            const outputMp4 = path.join(togifTempDir, 'output.mp4');
+        const inputWebp = path.join(togifTempDir, 'input.webp');
+        const outputGif = path.join(togifTempDir, 'output.gif');
+        const outputMp4 = path.join(togifTempDir, 'output.mp4');
 
-            fs.writeFileSync(inputWebp, stickerBuffer);
+        fs.writeFileSync(inputWebp, stickerBuffer);
 
-            await sharp(stickerBuffer, {
-              animated: true
-            })
-              .gif({
-                loop: 0,
-                effort: 3
-              })
-              .toFile(outputGif);
+        await sharp(stickerBuffer, {
+            animated: true
+        })
+        .gif({
+            loop: 0,
+            effort: 3
+        })
+        .toFile(outputGif);
 
-            await execAsync(
-              `ffmpeg -i "${outputGif}" -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -y "${outputMp4}"`
-            );
+        await execAsync(
+            `ffmpeg -i "${outputGif}" -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -y "${outputMp4}"`
+        );
 
-            await nazu.sendMessage(from, {
-              video: fs.readFileSync(outputMp4),
-              gifPlayback: true,
-              mimetype: 'video/mp4',
-              fileName: 'sticker.gif'
-            }, {
-              quoted: info
-            });
+        await chimu.sendMessage(from, {
+            video: fs.readFileSync(outputMp4),
+            gifPlayback: true,
+            mimetype: 'video/mp4',
+            fileName: 'sticker.gif'
+        }, {
+            quoted: info
+        });
 
-          } catch (error) {
-            console.error('Erro togif:', error);
-            await reply('❌ Erro ao converter a figurinha animada.');
-          } finally {
-            try {
-              fs.rmSync(togifTempDir, {
+    } catch (error) {
+        console.error('Erro togif:', error);
+        await reply('❌ Erro ao converter a figurinha animada.');
+    } finally {
+        try {
+            fs.rmSync(togifTempDir, {
                 recursive: true,
                 force: true
-              });
-            } catch { }
-          }
+            });
+        } catch {}
+    }
+}
+break;
+case 'mododono':
+case 'ownermode': {
+    // Se não for o dono tentando usar o comando mododono, ignora também
+    if (!isOwner) return;
+
+    try {
+        const currentConfig = loadJsonFile(CONFIG_FILE, {});
+        const novoStatus = !currentConfig.modoDono;
+        currentConfig.modoDono = novoStatus;
+
+        const salvou = writeJsonFile(CONFIG_FILE, currentConfig);
+
+        if (!salvou) {
+            return reply('❌ Erro ao salvar a alteração no arquivo de configuração.');
         }
-        break;
+
+        if (novoStatus) {
+            await reply(`╭━━━⊱ 👑 *MODO DONO* 👑 ⊱━━━╮
+│
+│ 🟢 *STATUS:* ATIVADO
+│
+│ 💡 O bot agora ignorará comandos
+│    de outros usuários!
+│
+╰━━━━━━━━━━━━━━━━━━━━━━╯`);
+        } else {
+            await reply(`╭━━━⊱ 👑 *MODO DONO* 👑 ⊱━━━╮
+│
+│ 🔴 *STATUS:* DESATIVADO
+│
+│ 💡 O bot voltou a responder
+│    todos os usuários.
+│
+╰━━━━━━━━━━━━━━━━━━━━━━╯`);
+        }
+
+    } catch (error) {
+        console.error('Erro no comando modo dono:', error);
+        await reply('❌ Ocorreu um erro interno ao alterar o modo dono.');
+    }
+}
+break;
       case 'totext':
       case 'transcrever': {
         const quoted =
@@ -25400,12 +25114,12 @@ ${prefix}togglecmdvip premium_ia off`);
             );
 
             return sendSticker(
-              nazu,
+              chimu,
               from,
               {
                 sticker: buffer,
                 author: `${pushname}\n${nomebot}\n${nomedono}`,
-                packname: 'Nazuna Bot - Stickers',
+                packname: 'TheChimasBot Bot - Stickers',
                 type: 'image'
               },
               {
@@ -25415,7 +25129,7 @@ ${prefix}togglecmdvip premium_ia off`);
 
           }
 
-          return nazu.sendMessage(
+          return chimu.sendMessage(
             from,
             {
               image: {
@@ -25466,7 +25180,7 @@ ${prefix}togglecmdvip premium_ia off`);
 
           const resultUrl = upscaleResult.result?.download;
 
-          return nazu.sendMessage(from, { image: { url: resultUrl } }, { quoted: info });
+          return chimu.sendMessage(from, { image: { url: resultUrl } }, { quoted: info });
         } catch (e) {
           console.error(e);
           return reply('❌ Ocorreu um erro interno. Tente novamente em alguns minutos.');
@@ -25477,7 +25191,7 @@ ${prefix}togglecmdvip premium_ia off`);
           if (!q) return reply('Falta o texto.');
           let ppimg = "";
           try {
-            ppimg = await nazu.profilePictureUrl(sender, 'image');
+            ppimg = await chimu.profilePictureUrl(sender, 'image');
           } catch {
             ppimg = 'https://telegra.ph/file/b5427ea4b8701bc47e751.jpg';
           }
@@ -25508,7 +25222,7 @@ ${prefix}togglecmdvip premium_ia off`);
               'Content-Type': 'application/json'
             }
           });
-          await sendSticker(nazu, from, {
+          await sendSticker(chimu, from, {
             sticker: Buffer.from(res.data.result.image, 'base64'),
             author: `『${pushname}』`,
             packname: `${nomebot}`, type: 'image'
@@ -25529,7 +25243,7 @@ ${prefix}togglecmdvip premium_ia off`);
           if (!q || !emoji1 || !emoji2) return reply(`Formato errado, utilize:\n${prefix}${command} emoji1/emoji2\nEx: ${prefix}${command} 🤓/🙄`);
           var datzc;
           datzc = await emojiMix(emoji1, emoji2);
-          await sendSticker(nazu, from, {
+          await sendSticker(chimu, from, {
             sticker: {
               url: datzc
             },
@@ -25577,7 +25291,7 @@ ${prefix}togglecmdvip premium_ia off`);
           // Aplicar quebra de linha para textos longos
           let processedText = q.length > 20 ? breakText(q, 20) : q;
 
-          await sendSticker(nazu, from, {
+          await sendSticker(chimu, from, {
             sticker: {
               url: `https://huratera.sirv.com/PicsArt_08-01-10.00.42.png?profile=Example-Text&text.0.text=${encodeURIComponent(processedText)}&text.0.outline.color=000000&text.0.outline.blur=0&text.0.outline.opacity=55&text.0.color=${cores}&text.0.font.family=${fontes}&text.0.font.weight=bold&text.0.background.color=ff0000`
             },
@@ -25675,7 +25389,7 @@ ${prefix}togglecmdvip premium_ia off`);
           await execAsync(webpCmd);
 
           // Enviar sticker
-          await sendSticker(nazu, from, {
+          await sendSticker(chimu, from, {
             sticker: fs.readFileSync(outputWebp),
             author: `『${pushname}』`,
             packname: `${nomebot}`,
@@ -25696,60 +25410,167 @@ ${prefix}togglecmdvip premium_ia off`);
           await reply("❌ Ocorreu um erro ao criar o sticker animado. Tente novamente em alguns minutos.");
         }
         break;
-      case 'st':
-      case 'stk':
-      case 'sticker':
-      case 's':
-        try {
-          var RSM = info.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-          var boij2 = RSM?.imageMessage || info.message?.imageMessage || RSM?.viewOnceMessageV2?.message?.imageMessage || info.message?.viewOnceMessageV2?.message?.imageMessage || info.message?.viewOnceMessage?.message?.imageMessage || RSM?.viewOnceMessage?.message?.imageMessage;
-          var boij = RSM?.videoMessage || info.message?.videoMessage || RSM?.viewOnceMessageV2?.message?.videoMessage || info.message?.viewOnceMessageV2?.message?.videoMessage || info.message?.viewOnceMessage?.message?.videoMessage || RSM?.viewOnceMessage?.message?.videoMessage;
-          if (!boij && !boij2) return reply(`Marque uma imagem ou um vídeo de até 9.9 segundos para fazer figurinha, com o comando: ${prefix + command} (mencionando a mídia)`);
-          var isVideo2 = !!boij;
-          if (isVideo2 && boij.seconds > 9.9) return reply(`O vídeo precisa ter no máximo 9.9 segundos para ser convertido em figurinha.`);
-          var buffer = await getFileBuffer(isVideo2 ? boij : boij2, isVideo2 ? 'video' : 'image');
-          await sendSticker(nazu, from, {
-            sticker: buffer,
-            author: `${pushname}`,
-            packname: `${nomebot}`,
-            type: isVideo2 ? 'video' : 'image',
-            forceSquare: true
-          }, {
-            quoted: info
-          });
-        } catch (e) {
-          console.error(e);
-          await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
+        
+        
+      // ============================================================================
+// CASE COMPLETO: FIGURINHAS (ST / STK / STICKER) E CONFIRMAÇÕES (SIM / NAO)
+// ============================================================================
+
+// --- FIGURINHAS NORMAIS E CROP2 (ST / STK / STICKER) ---
+case 'st':
+case 'stk':
+case 'sticker':
+case 's':
+case 'st2':
+case 'stk2':
+case 'sticker2':
+case 's2': {
+  try {
+    // 1. Mapeamento e Captura Extensiva do Contexto da Mídia
+    const quotedMsg = info.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+    const imageMsg = 
+      quotedMsg?.imageMessage || 
+      info.message?.imageMessage || 
+      quotedMsg?.viewOnceMessageV2?.message?.imageMessage || 
+      info.message?.viewOnceMessageV2?.message?.imageMessage || 
+      quotedMsg?.viewOnceMessage?.message?.imageMessage || 
+      info.message?.viewOnceMessage?.message?.imageMessage;
+
+    const videoMsg = 
+      quotedMsg?.videoMessage || 
+      info.message?.videoMessage || 
+      quotedMsg?.viewOnceMessageV2?.message?.videoMessage || 
+      info.message?.viewOnceMessageV2?.message?.videoMessage || 
+      quotedMsg?.viewOnceMessage?.message?.videoMessage || 
+      info.message?.viewOnceMessage?.message?.videoMessage;
+
+    // 2. Validação se existe imagem ou vídeo
+    if (!imageMsg && !videoMsg) {
+      return await reply(`⚠️ Marque uma imagem ou vídeo (até 10s) para criar uma figurinha.\n\nExemplo: *${prefix + command}* (respondendo à mídia)`);
+    }
+
+    const isVideo = Boolean(videoMsg);
+    const mediaContext = isVideo ? videoMsg : imageMsg;
+    const buffer = await getFileBuffer(mediaContext, isVideo ? 'video' : 'image');
+
+    // 3. Determinação dos Metadados (Autor e Formato Quadrado vs Recortado)
+    const isSt2 = ['st2', 'stk2', 'sticker2', 's2'].includes(command.toLowerCase());
+    const stickerAuthor = isSt2 ? `『${pushname}』` : `${pushname}`;
+    const forceSquare = !isSt2;
+
+    // 4. Tratamento Especial para Vídeos Longos (> 10s)
+    if (isVideo && videoMsg.seconds > 10) {
+      const userKey = `${from}_${sender}`;
+
+      // Limpa qualquer requisição pendente anterior do mesmo usuário
+      if (pendingStickers.has(userKey)) {
+        clearTimeout(pendingStickers.get(userKey).timeout);
+      }
+
+      // Configura expiração de 2 minutos para liberar a memória
+      const timeout = setTimeout(() => {
+        if (pendingStickers.has(userKey)) {
+          pendingStickers.delete(userKey);
+          reply(`⏱️ O tempo limite de resposta para a figurinha expirou.`);
         }
-        break;
-      case 'st2':
-      case 'stk2':
-      case 'sticker2':
-      case 's2':
-        try {
-          var RSM = info.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-          var boij2 = RSM?.imageMessage || info.message?.imageMessage || RSM?.viewOnceMessageV2?.message?.imageMessage || info.message?.viewOnceMessageV2?.message?.imageMessage || info.message?.viewOnceMessage?.message?.imageMessage || RSM?.viewOnceMessage?.message?.imageMessage;
-          var boij = RSM?.videoMessage || info.message?.videoMessage || RSM?.viewOnceMessageV2?.message?.videoMessage || info.message?.viewOnceMessageV2?.message?.videoMessage || info.message?.viewOnceMessage?.message?.videoMessage || RSM?.viewOnceMessage?.message?.videoMessage;
-          if (!boij && !boij2) return reply(`Marque uma imagem ou um vídeo de até 9.9 segundos para fazer figurinha, com o comando: ${prefix + command} (mencionando a mídia)`);
-          var isVideo2 = !!boij;
-          if (isVideo2 && boij.seconds > 9.9) return reply(`O vídeo precisa ter no máximo 9.9 segundos para ser convertido em figurinha.`);
-          var buffer = await getFileBuffer(isVideo2 ? boij : boij2, isVideo2 ? 'video' : 'image');
-          await sendSticker(nazu, from, {
-            sticker: buffer,
-            author: `『${pushname}』`,
-            packname: `${nomebot}`, type: isVideo2 ? 'video' : 'image'
-          }, {
-            quoted: info
-          });
-        } catch (e) {
-          console.error(e);
-          await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
-        }
-        break;
+      }, 2 * 60 * 1000);
+
+      // Armazena no estado global de pendências
+      pendingStickers.set(userKey, {
+        buffer,
+        duration: videoMsg.seconds,
+        author: stickerAuthor,
+        packname: `${nomebot}`,
+        forceSquare,
+        timeout
+      });
+
+      return await reply(
+        `⚠️ O vídeo selecionado possui *${videoMsg.seconds}s* (o limite padrão é 10s).\n\n` +
+        `Deseja acelerá-lo para ajustá-lo automaticamente para 10 segundos?\n\n` +
+        `Responda com *${prefix}sim* para aceitar ou *${prefix}nao* para cancelar.`
+      );
+    }
+
+    // 5. Processamento e Envio Padrão ( <= 10s )
+    await sendSticker(chimu, from, {
+      sticker: buffer,
+      author: stickerAuthor,
+      packname: `${nomebot}`,
+      type: isVideo ? 'video' : 'image',
+      forceSquare
+    }, { quoted: info });
+
+  } catch (e) {
+    console.error('[ERRO STICKER]:', e);
+    await reply("❌ Ocorreu um erro ao processar a figurinha. Tente novamente em instantes.");
+  }
+  break;
+}
+
+// --- ACEITE PARA ACELERAR VÍDEO (> 10s) ---
+case 'sim':
+case 's_aceitar':
+case 'yes':
+case 'y': {
+  try {
+    const userKey = `${from}_${sender}`;
+
+    if (!pendingStickers.has(userKey)) break;
+
+    const pendingData = pendingStickers.get(userKey);
+
+    clearTimeout(pendingData.timeout);
+    pendingStickers.delete(userKey);
+
+    await reply('⏳ Acelerando o vídeo para caber nos 10 segundos e gerando a figurinha...');
+
+    // Chama a função importada do StickerExt.js
+    const acceleratedBuffer = await compressVideoDuration(pendingData.buffer, pendingData.duration);
+
+    await sendSticker(chimu, from, {
+      sticker: acceleratedBuffer,
+      author: pendingData.author,
+      packname: pendingData.packname,
+      type: 'video',
+      forceSquare: pendingData.forceSquare
+    }, { quoted: info });
+
+  } catch (e) {
+    console.error('[ERRO ACEITAR STICKER]:', e);
+    await reply("❌ Ocorreu um erro ao acelerar o vídeo para figurinha.");
+  }
+  break;
+}
+
+// --- REJEIÇÃO / CANCELAMENTO DE FIGURINHA PENDENTE ---
+case 'nao':
+case 'não':
+case 'no':
+case 'n': {
+  try {
+    const userKey = `${from}_${sender}`;
+
+    if (pendingStickers.has(userKey)) {
+      const pendingData = pendingStickers.get(userKey);
+      clearTimeout(pendingData.timeout);
+      pendingStickers.delete(userKey);
+
+      await reply('❌ A criação da figurinha foi cancelada com sucesso.');
+    }
+  } catch (e) {
+    console.error('[ERRO CANCELAR STICKER]:', e);
+  }
+  break;
+}
+        
+        
+        
       case 'figualeatoria':
       case 'randomsticker':
         try {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             sticker: {
               url: `https://raw.githubusercontent.com/badDevelopper/Testfigu/main/fig (${Math.floor(Math.random() * 8051)}).webp`
             }
@@ -25785,7 +25606,7 @@ ${prefix}togglecmdvip premium_ia off`);
             info.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage,
             'sticker'
           );
-          await sendSticker(nazu, from, {
+          await sendSticker(chimu, from, {
             sticker: `data:image/jpeg;base64,${encmediats.toString('base64')}`,
             author: packname,
             packname: author,
@@ -25837,7 +25658,7 @@ ${prefix}togglecmdvip premium_ia off`);
             pack
           } = dataTake[sender];
           const encmediats = await getFileBuffer(info.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage, 'sticker');
-          await sendSticker(nazu, from, {
+          await sendSticker(chimu, from, {
             sticker: `data:image/jpeg;base64,${encmediats.toString('base64')}`,
             author: pack,
             packname: author,
@@ -25896,7 +25717,7 @@ ${prefix}togglecmdvip premium_ia off`);
               const stickerBuffer = Buffer.from(stickerResponse.data);
 
               // Enviar figurinha
-              await nazu.sendMessage(destino, {
+              await chimu.sendMessage(destino, {
                 sticker: stickerBuffer
               });
 
@@ -25914,7 +25735,7 @@ ${prefix}togglecmdvip premium_ia off`);
           // Mensagem final
           const finalMsg = `✅ Pronto!\n\n📊 *Resultado:*\n• Enviadas: ${successCount} figurinha${successCount !== 1 ? 's' : ''}\n${failCount > 0 ? `• Falhas: ${failCount}\n` : ''}`;
 
-          await nazu.sendMessage(destino, {
+          await chimu.sendMessage(destino, {
             text: finalMsg
           });
 
@@ -25963,7 +25784,7 @@ ${prefix}togglecmdvip premium_ia off`);
           participant = info.key.participant || menc_prt;
         }
         try {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             delete: {
               remoteJid: from,
               fromMe: false,
@@ -26062,7 +25883,7 @@ ${prefix}togglecmdvip premium_ia off`);
           const pergunta = partes[0];
           const opcoes = partes.slice(1);
 
-          await nazu.sendMessage(
+          await chimu.sendMessage(
             from,
             {
               poll: {
@@ -26110,12 +25931,12 @@ ${prefix}togglecmdvip premium_ia off`);
           if (!menc_os2) return reply("Marque alguém 🙄");
           if (menc_os2 === nmrdn) return reply("❌ Não posso banir o dono do bot.");
           if (menc_os2 === botNumber) return reply("❌ Ops! Eu faço parte da bagunça, não dá pra me remover 💔");
-          await nazu.groupParticipantsUpdate(from, [menc_os2], 'remove');
+          await chimu.groupParticipantsUpdate(from, [menc_os2], 'remove');
 
           // Notificação X9 para banimento
           if (groupData.x9) {
             const reason = q && q.length > 0 ? `\n📝 Motivo: ${q}` : '';
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: `🚪 *X9 Report:* @${menc_os2.split('@')[0]} foi removido(a) do grupo por @${sender.split('@')[0]}.${reason}`,
               mentions: [menc_os2, sender],
             }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
@@ -26139,7 +25960,7 @@ ${prefix}togglecmdvip premium_ia off`);
           if (menc_os2 === botNumber) return reply("❌ Ops! Eu faço parte da bagunça, não dá pra me remover 💔");
 
           // Aviso com contagem regressiva
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `⚠️ *ÚLTIMAS PALAVRAS!*\n\n@${menc_os2.split('@')[0]}, você tem *10 segundos* para dizer suas últimas palavras antes de ser banido! ⏰`,
             mentions: [menc_os2]
           });
@@ -26148,18 +25969,18 @@ ${prefix}togglecmdvip premium_ia off`);
           await new Promise(resolve => setTimeout(resolve, 10000));
 
           // Remove o usuário
-          await nazu.groupParticipantsUpdate(from, [menc_os2], 'remove');
+          await chimu.groupParticipantsUpdate(from, [menc_os2], 'remove');
 
           // Notificação X9 para banimento
           if (groupData.x9) {
             const reason = q && q.length > 0 ? `\n📝 Motivo: ${q}` : '';
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: `🚪 *X9 Report:* @${menc_os2.split('@')[0]} foi removido(a) do grupo por @${sender.split('@')[0]}.${reason}`,
               mentions: [menc_os2, sender],
             }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
           }
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `👋 @${menc_os2.split('@')[0]} foi banido! Adeus! 🚪${q && q.length > 0 ? '\n\n📝 Motivo: ' + q : ''}`,
             mentions: [menc_os2]
           });
@@ -26178,7 +25999,7 @@ ${prefix}togglecmdvip premium_ia off`);
         if (menc_os2 === botNumber) return reply("❌ Ops! Eu faço parte da bagunça, não dá pra me remover 💔");
 
         try {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `⚠️ *ÚLTIMAS PALAVRAS!*\n\n@${menc_os2.split('@')[0]}, você tem *10 segundos* para dizer suas últimas palavras antes de ser banido! ⏰`,
             mentions: [menc_os2]
           });
@@ -26188,7 +26009,7 @@ ${prefix}togglecmdvip premium_ia off`);
           const defaultMemeMsg = `😂 *ERA MEME!*\n\n@${menc_os2.split('@')[0]}, relaxa, era só uma brincadeira! 🤣\n\nVocê não vai ser banido... dessa vez! 😎`;
           const customMemeMsg = groupData.bamMessage || defaultMemeMsg;
 
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: customMemeMsg.replace(/#user#/g, `@${menc_os2.split('@')[0]}`),
             mentions: [menc_os2]
           });
@@ -26253,7 +26074,7 @@ ${prefix}togglecmdvip premium_ia off`);
           if (!isGroupAdmin) return reply("Comando restrito a Administradores ou Moderadores com permissão. 💔");
           if (!isBotAdmin) return reply("Eu preciso ser adm 💔");
           var linkgc;
-          linkgc = await nazu.groupInviteCode(from);
+          linkgc = await chimu.groupInviteCode(from);
           await reply('https://chat.whatsapp.com/' + linkgc);
         } catch (e) {
           console.error(e);
@@ -26272,13 +26093,13 @@ ${prefix}togglecmdvip premium_ia off`);
           let requests = [];
           try {
             // Tenta o método padrão se existir
-            if (typeof nazu.groupGetRequestParticipants === 'function') {
-              requests = await nazu.groupGetRequestParticipants(from);
-            } else if (typeof nazu.groupRequestParticipantsList === 'function') {
-              requests = await nazu.groupRequestParticipantsList(from);
+            if (typeof chimu.groupGetRequestParticipants === 'function') {
+              requests = await chimu.groupGetRequestParticipants(from);
+            } else if (typeof chimu.groupRequestParticipantsList === 'function') {
+              requests = await chimu.groupRequestParticipantsList(from);
             } else {
               // Fallback: fazer a query manualmente
-              const result = await nazu.query({
+              const result = await chimu.query({
                 tag: 'iq',
                 attrs: {
                   type: 'get',
@@ -26334,12 +26155,12 @@ ${prefix}togglecmdvip premium_ia off`);
             // Função para obter solicitações pendentes (compatível com versões antigas do Baileys)
             let allRequests = [];
             try {
-              if (typeof nazu.groupGetRequestParticipants === 'function') {
-                allRequests = await nazu.groupGetRequestParticipants(from);
-              } else if (typeof nazu.groupRequestParticipantsList === 'function') {
-                allRequests = await nazu.groupRequestParticipantsList(from);
+              if (typeof chimu.groupGetRequestParticipants === 'function') {
+                allRequests = await chimu.groupGetRequestParticipants(from);
+              } else if (typeof chimu.groupRequestParticipantsList === 'function') {
+                allRequests = await chimu.groupRequestParticipantsList(from);
               } else {
-                const result = await nazu.query({
+                const result = await chimu.query({
                   tag: 'iq',
                   attrs: { type: 'get', xmlns: 'w:g2', to: from },
                   content: [{ tag: 'membership_approval_requests', attrs: {} }]
@@ -26365,7 +26186,7 @@ ${prefix}togglecmdvip premium_ia off`);
 
             for (const req of allRequests) {
               try {
-                await nazu.groupRequestParticipantsUpdate(from, [req.jid], 'approve');
+                await chimu.groupRequestParticipantsUpdate(from, [req.jid], 'approve');
                 approved.push(req.jid);
               } catch (err) {
                 failed.push(req.jid);
@@ -26375,7 +26196,7 @@ ${prefix}togglecmdvip premium_ia off`);
 
             // Notificação X9 para aprovação em massa
             if (groupData.x9 && approved.length > 0) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 text: `✅ *X9 Report:* ${approved.length} solicitações foram aprovadas em massa por @${sender.split('@')[0]}.`,
                 mentions: [sender],
               }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
@@ -26398,12 +26219,12 @@ ${prefix}togglecmdvip premium_ia off`);
 
           for (const user of usersToApprove) {
             try {
-              await nazu.groupRequestParticipantsUpdate(from, [user], 'approve');
+              await chimu.groupRequestParticipantsUpdate(from, [user], 'approve');
               approved.push(user);
 
               // Notificação X9 para aprovação de solicitação
               if (groupData.x9) {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   text: `✅ *X9 Report:* Solicitação de @${user.split('@')[0]} foi aprovada por @${sender.split('@')[0]}.`,
                   mentions: [user, sender],
                 }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
@@ -26448,12 +26269,12 @@ ${prefix}togglecmdvip premium_ia off`);
 
           for (const user of usersToReject) {
             try {
-              await nazu.groupRequestParticipantsUpdate(from, [user], 'reject');
+              await chimu.groupRequestParticipantsUpdate(from, [user], 'reject');
               rejected.push(user);
 
               // Notificação X9 para recusa de solicitação
               if (groupData.x9) {
-                await nazu.sendMessage(from, {
+                await chimu.sendMessage(from, {
                   text: `❌ *X9 Report:* Solicitação de @${user.split('@')[0]} foi recusada por @${sender.split('@')[0]}.`,
                   mentions: [user, sender],
                 }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
@@ -26575,7 +26396,7 @@ ${prefix}togglecmdvip premium_ia off`);
           if (!isGroupAdmin) return reply("Comando restrito a Administradores ou Moderadores com permissão. 💔");
           if (!isBotAdmin) return reply("Eu preciso ser adm 💔");
           if (!menc_os2) return reply("Marque alguém 🙄");
-          await nazu.groupParticipantsUpdate(from, [menc_os2], 'promote');
+          await chimu.groupParticipantsUpdate(from, [menc_os2], 'promote');
 
 
 
@@ -26592,7 +26413,7 @@ ${prefix}togglecmdvip premium_ia off`);
           if (!isGroupAdmin) return reply("Comando restrito a Administradores ou Moderadores com permissão. 💔");
           if (!isBotAdmin) return reply("Eu preciso ser adm 💔");
           if (!menc_os2) return reply("Marque alguém 🙄");
-          await nazu.groupParticipantsUpdate(from, [menc_os2], 'demote');
+          await chimu.groupParticipantsUpdate(from, [menc_os2], 'demote');
 
 
 
@@ -26615,11 +26436,11 @@ ${prefix}togglecmdvip premium_ia off`);
           if (!newName) return reply('❌ Digite um novo nome para o grupo.\n\n📝 *Uso:* ' + groupPrefix + 'nomegp Nome do Grupo');
 
           const oldName = groupMetadata?.subject || 'Nome anterior';
-          await nazu.groupUpdateSubject(from, newName);
+          await chimu.groupUpdateSubject(from, newName);
 
           // Notificação X9 para mudança de nome
           if (groupData.x9) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: `✏️ *X9 Report:* Nome do grupo alterado por @${sender.split('@')[0]}\n\n🔹 Anterior: *${oldName}*\n🔸 Novo: *${newName}*`,
               mentions: [sender],
             }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
@@ -26642,11 +26463,11 @@ ${prefix}togglecmdvip premium_ia off`);
           if (!isBotAdmin) return reply("Eu preciso ser adm 💔");
           const newDesc = q.trim();
           if (!newDesc) return reply('❌ Digite uma nova descrição para o grupo.\n\n📝 *Uso:* ' + groupPrefix + 'descgrupo Descrição do grupo aqui');
-          await nazu.groupUpdateDescription(from, newDesc);
+          await chimu.groupUpdateDescription(from, newDesc);
 
           // Notificação X9 para mudança de descrição
           if (groupData.x9) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: `📝 *X9 Report:* Descrição do grupo alterada por @${sender.split('@')[0]}`,
               mentions: [sender],
             }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
@@ -26678,7 +26499,7 @@ ${prefix}togglecmdvip premium_ia off`);
           try {
             // Processa a imagem com ffmpeg antes de atualizar
             const processedBuffer = await processImageForProfile(imageBuffer);
-            await nazu.updateProfilePicture(from, processedBuffer);
+            await chimu.updateProfilePicture(from, processedBuffer);
 
 
 
@@ -26720,7 +26541,7 @@ ${prefix}togglecmdvip premium_ia off`);
           }
 
           let msg = `📢 *Membros mencionados:* ${q ? `\n💬 *Mensagem:* ${q}` : ''}\n\n`;
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: msg + membros.map(m => `➤ @${getUserName(m)}`).join('\n'),
             mentions: membros
           });
@@ -26737,11 +26558,11 @@ ${prefix}togglecmdvip premium_ia off`);
           if (!isGroupAdmin) return reply("Comando restrito a Administradores ou Moderadores com permissão. 💔");
           if (!isBotAdmin) return reply("Eu preciso ser adm 💔");
           if (q.toLowerCase() === 'a' || q.toLowerCase() === 'o' || q.toLowerCase() === 'open' || q.toLowerCase() === 'abrir') {
-            await nazu.groupSettingUpdate(from, 'not_announcement');
+            await chimu.groupSettingUpdate(from, 'not_announcement');
 
             // Notificação X9 para abertura do grupo
             if (groupData.x9) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 text: `🔓 *X9 Report:* Grupo aberto por @${sender.split('@')[0]}. Agora todos podem enviar mensagens.`,
                 mentions: [sender],
               }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
@@ -26749,11 +26570,11 @@ ${prefix}togglecmdvip premium_ia off`);
 
             await reply('Grupo aberto.');
           } else if (q.toLowerCase() === 'f' || q.toLowerCase() === 'c' || q.toLowerCase() === 'close' || q.toLowerCase() === 'fechar') {
-            await nazu.groupSettingUpdate(from, 'announcement');
+            await chimu.groupSettingUpdate(from, 'announcement');
 
             // Notificação X9 para fechamento do grupo
             if (groupData.x9) {
-              await nazu.sendMessage(from, {
+              await chimu.sendMessage(from, {
                 text: `🔒 *X9 Report:* Grupo fechado por @${sender.split('@')[0]}. Apenas ADMs podem enviar mensagens.`,
                 mentions: [sender],
               }).catch(err => console.error(`❌ Erro ao enviar X9: ${err.message}`));
@@ -26814,7 +26635,7 @@ ${prefix}togglecmdvip premium_ia off`);
           writeJsonFile(groupFilePath, data);
 
           // (Re)agendar job em memória
-          try { scheduleGroupJob(from, 'open', normalizedTime, nazu); } catch (e) { console.error('Erro ao agendar open cron:', e); }
+          try { scheduleGroupJob(from, 'open', normalizedTime, chimu); } catch (e) { console.error('Erro ao agendar open cron:', e); }
 
           let msg = `✅ Agendamento salvo! O grupo será ABERTO todos os dias às ${normalizedTime} (horário de São Paulo).`;
           if (!isBotAdmin) msg += '\n⚠️ Observação: Eu preciso ser administrador para efetivar a abertura no horário.';
@@ -26872,7 +26693,7 @@ ${prefix}togglecmdvip premium_ia off`);
           writeJsonFile(groupFilePath, data);
 
           // (Re)agendar job em memória
-          try { scheduleGroupJob(from, 'close', normalizedTime, nazu); } catch (e) { console.error('Erro ao agendar close cron:', e); }
+          try { scheduleGroupJob(from, 'close', normalizedTime, chimu); } catch (e) { console.error('Erro ao agendar close cron:', e); }
 
           let msg = `✅ Agendamento salvo! O grupo será FECHADO todos os dias às ${normalizedTime} (horário de São Paulo).`;
           if (!isBotAdmin) msg += '\n⚠️ Observação: Eu preciso ser administrador para efetivar o fechamento no horário.';
@@ -27039,7 +26860,7 @@ A mensagem será enviada todos os dias no horário especificado.`);
               writeJsonFile(groupFilePath, data);
 
               // Agendar
-              scheduleAutoMessage(from, msgConfig, nazu);
+              scheduleAutoMessage(from, msgConfig, chimu);
 
               await reply(`✅ Mensagem automática adicionada!
 
@@ -27122,7 +26943,7 @@ A mensagem será enviada todos os dias às ${normalizedTime} (horário de São P
               writeJsonFile(groupFilePath, data);
 
               // Reagendar
-              scheduleAutoMessage(from, onMsg, nazu);
+              scheduleAutoMessage(from, onMsg, chimu);
 
               await reply(`✅ Mensagem automática ativada!\n\n🆔 ID: ${onMsgId}`);
               break;
@@ -27347,7 +27168,7 @@ A mensagem será enviada todos os dias às ${normalizedTime} (horário de São P
 
           await new Promise(resolve => setTimeout(resolve, 3000));
 
-          await nazu.groupParticipantsUpdate(
+          await chimu.groupParticipantsUpdate(
             from,
             [sorteado],
             'remove'
@@ -27552,7 +27373,7 @@ A mensagem será enviada todos os dias às ${normalizedTime} (horário de São P
             registerMassMentionUse(from);
           }
 
-          await nazu.sendMessage(from, DFC4).catch(error => { });
+          await chimu.sendMessage(from, DFC4).catch(error => { });
         } catch (e) {
           console.error(e);
           await reply("❌ Ocorreu um erro interno. Tente novamente em alguns minutos.");
@@ -27653,7 +27474,7 @@ A mensagem será enviada todos os dias às ${normalizedTime} (horário de São P
             for (const groupId of groups) {
               let groupName = null;
               try {
-                const meta = await nazu.groupMetadata(groupId).catch(() => null);
+                const meta = await chimu.groupMetadata(groupId).catch(() => null);
                 groupName = meta?.subject || null;
               } catch (e) { }
               text += `\n${index}. ${groupName ? groupName + ' - ' : ''}${groupId}`;
@@ -27678,7 +27499,7 @@ A mensagem será enviada todos os dias às ${normalizedTime} (horário de São P
 
           if (sub === 'send' || sub === 'enviar') {
             const customText = rest || null;
-            const result = await runDonoDivulgacaoSend(nazu, customText, 'manual');
+            const result = await runDonoDivulgacaoSend(chimu, customText, 'manual');
             if (!result.success) return reply(result.message);
             return reply(`✅ Divulgação enviada.\n📨 Enviadas: ${result.sent}\n⚠️ Falhas: ${result.failed}`);
           }
@@ -27710,7 +27531,7 @@ A mensagem será enviada todos os dias às ${normalizedTime} (horário de São P
             config.schedule.time = normalized;
             config.schedule.lastRun = null;
             saveDonoDivulgacao(config);
-            scheduleDonoDivulgacaoJob(normalized, nazu);
+            scheduleDonoDivulgacaoJob(normalized, chimu);
 
             return reply(`✅ Agendamento diário definido para ${normalized} (horário de São Paulo).`);
           }
@@ -27817,8 +27638,8 @@ A mensagem será enviada todos os dias às ${normalizedTime} (horário de São P
                   expiryTimestamp: Math.floor(Date.now() / 1000) + 86400
                 }
               };
-              const msg = await generateWAMessageFromContent(from, paymentObject, { userJid: nazu?.user?.id });
-              await nazu.relayMessage(from, msg.message, { messageId: msg.key.id });
+              const msg = await generateWAMessageFromContent(from, paymentObject, { userJid: chimu?.user?.id });
+              await chimu.relayMessage(from, msg.message, { messageId: msg.key.id });
             } catch (e) {
               console.error(`Falha ao enviar mensagem ${index + 1}:`, e);
               falhas++;
@@ -28233,7 +28054,7 @@ Exemplos:
 
           let removidos = 0;
           try {
-            await nazu.groupParticipantsUpdate(from, fantasmas, 'remove');
+            await chimu.groupParticipantsUpdate(from, fantasmas, 'remove');
             removidos = fantasmas.length;
 
             // Atualiza o contador removendo os usuários banidos
@@ -28266,7 +28087,6 @@ Exemplos:
             if (action === 'on' || action === 'ativar') {
 
 
-              groupData.welcome.photo = true;
               groupData.welcome.photoType = 'api';
               delete groupData.welcome.image; // limpa imagem antiga se tiver
               writeJsonFile(buildGroupFilePath(from), groupData);
@@ -28276,8 +28096,6 @@ Exemplos:
             } else if (action === 'off' || action === 'desativar') {
 
               groupData.welcome.photo = false;
-              delete groupData.welcome.photoType; // sem isso, a foto continuava sendo enviada
-              delete groupData.welcome.image;
               writeJsonFile(buildGroupFilePath(from), groupData);
 
               await reply("✅ Foto de boas-vindas DESATIVADA!");
@@ -28312,7 +28130,6 @@ Exemplos:
 
             if (action === 'api') {
 
-              groupData.welcome.photo = true;
               groupData.welcome.photoType = 'api';
               delete groupData.welcome.image;
 
@@ -28332,7 +28149,6 @@ Exemplos:
 
               if (!uploadResult) throw new Error('Falha ao fazer upload da imagem');
 
-              groupData.welcome.photo = true;
               groupData.welcome.photoType = 'custom';
               groupData.welcome.image = uploadResult;
 
@@ -28429,54 +28245,19 @@ Exemplos:
         {
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
           if (!isGroupAdmin) return reply("você precisa ser adm 💔");
-
+          if (!isQuotedImage && !isImage) return reply('❌ Marque uma imagem ou envie uma imagem com o comando!');
           try {
-            const action = (q || '').toLowerCase().trim();
-
+            const media = await getFileBuffer(isQuotedImage ? info.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage : info.message.imageMessage, 'image');
+            const uploadResult = await upload(media);
+            if (!uploadResult) throw new Error('Falha ao fazer upload da imagem');
             if (!groupData.exit) {
+
               groupData.exit = {};
             }
 
-            if (!isQuotedImage && !isImage && (action === 'on' || action === 'ativar')) {
-
-              // Ativa a foto de saída usando o card gerado automaticamente (foto de perfil de quem saiu)
-              groupData.exit.photo = true;
-              groupData.exit.photoType = 'api';
-              delete groupData.exit.image; // limpa imagem custom antiga, se tiver
-              writeJsonFile(buildGroupFilePath(from), groupData);
-
-              const exitMsgHint = groupData.exit.enabled ? '' : `\n\n⚠️ As mensagens de saída estão desativadas. Use ${prefix}saida para ativá-las.`;
-              await reply(`✅ Foto de saída ATIVADA!\n\nSe quiser usar uma imagem personalizada, marque/envie uma imagem com ${prefix}${command}.${exitMsgHint}`);
-
-            } else if (!isQuotedImage && !isImage && (action === 'off' || action === 'desativar')) {
-
-              groupData.exit.photo = false;
-              delete groupData.exit.photoType; // sem isso, a foto continuaria sendo enviada
-              delete groupData.exit.image;
-              writeJsonFile(buildGroupFilePath(from), groupData);
-
-              await reply("✅ Foto de saída DESATIVADA!");
-
-            } else if (isQuotedImage || isImage) {
-
-              const media = await getFileBuffer(isQuotedImage ? info.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage : info.message.imageMessage, 'image');
-              const uploadResult = await upload(media);
-              if (!uploadResult) throw new Error('Falha ao fazer upload da imagem');
-
-              groupData.exit.photo = true;
-              groupData.exit.photoType = 'custom';
-              groupData.exit.image = uploadResult;
-              writeJsonFile(buildGroupFilePath(from), groupData);
-
-              await reply('✅ Foto de saída personalizada configurada com sucesso!');
-
-            } else {
-
-              const status = groupData.exit.photo ? 'ATIVADO' : 'DESATIVADO';
-              await reply(`🤔 Uso:\n${prefix}${command} on - Ativa a foto de saída (gerada automaticamente)\n${prefix}${command} off - Desativa a foto de saída\n${prefix}${command} + marque/envie uma imagem - Define uma foto personalizada\n\n📊 Status atual: ${status}`);
-
-            }
-
+            groupData.exit.image = uploadResult;
+            writeJsonFile(buildGroupFilePath(from), groupData);
+            await reply('✅ Foto de saída configurada com sucesso!');
           } catch (error) {
             console.error(error);
             reply("ocorreu um erro 💔");
@@ -28681,7 +28462,7 @@ Exemplos:
             return reply("Uso inválido. Certifique-se de marcar um usuário e especificar um limite válido (número maior que 0).");
           }
           // Normaliza o ID do usuário para LID antes de salvar (aceita JID ou LID)
-          const userIdLid = await getLidFromJidCached(nazu, userId);
+          const userIdLid = await getLidFromJidCached(chimu, userId);
           if (!AllgroupMembers.includes(userIdLid)) {
             return reply(`@${getUserName(userId)} não está no grupo.`, {
               mentions: [userId]
@@ -28714,7 +28495,7 @@ Exemplos:
             return reply("Por favor, marque um usuário ou responda a uma mensagem.");
           }
           // Normaliza para LID e busca no map
-          const userIdLid = await getLidFromJidCached(nazu, userId);
+          const userIdLid = await getLidFromJidCached(chimu, userId);
           if (!parceriasData.partners[userIdLid]) {
             return reply(`@${getUserName(userId)} não é um parceiro.`, {
               mentions: [userIdLid]
@@ -28779,7 +28560,7 @@ Exemplos:
                 }
                 if (!targetUser) {
                   try {
-                    const lid = await getLidFromJidCached(nazu, candidateJid);
+                    const lid = await getLidFromJidCached(chimu, candidateJid);
                     targetUser = lid && lid.includes('@lid') ? lid : candidateJid;
                   } catch (err) {
                     targetUser = candidateJid;
@@ -28832,7 +28613,7 @@ Exemplos:
                 }
                 if (!targetUser) {
                   try {
-                    const lid = await getLidFromJidCached(nazu, candidateJid);
+                    const lid = await getLidFromJidCached(chimu, candidateJid);
                     targetUser = lid && lid.includes('@lid') ? lid : candidateJid;
                   } catch (err) {
                     targetUser = candidateJid;
@@ -28907,7 +28688,7 @@ Exemplos:
           const warningCount = groupData.warnings[menc_os2].length;
           fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
           if (warningCount >= 3) {
-            await nazu.groupParticipantsUpdate(from, [menc_os2], 'remove');
+            await chimu.groupParticipantsUpdate(from, [menc_os2], 'remove');
             delete groupData.warnings[menc_os2];
             fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
             reply(`🚫 @${getUserName(menc_os2)} recebeu 3 advertências e foi banido!\nÚltima advertência: ${reason}`, {
@@ -29037,7 +28818,7 @@ Exemplos:
 
           const adminsToNotify = Array.isArray(groupAdmins) ? groupAdmins : [];
           for (const adminId of adminsToNotify) {
-            await nazu.sendMessage(adminId, { text: adminMessage, mentions: [ticket.userId] }).catch(err => {
+            await chimu.sendMessage(adminId, { text: adminMessage, mentions: [ticket.userId] }).catch(err => {
               console.error(`Erro ao notificar admin ${adminId}:`, err.message || err);
             });
           }
@@ -29069,7 +28850,7 @@ Exemplos:
             .map(p => p.lid || p.id)
             .filter(Boolean);
 
-          const adminIds = await convertIdsToLid(nazu, rawAdmins);
+          const adminIds = await convertIdsToLid(chimu, rawAdmins);
           const isTicketAdmin = idInArray(sender, adminIds) || isOwner || isSubOwner;
           if (!isTicketAdmin) return reply('❌ Apenas admins do grupo podem aceitar este ticket.');
 
@@ -29509,20 +29290,20 @@ ${prefix}antistickerplus remover → remove usuário e apaga mensagem
             if (!groupData.assistente) {
               delete groupData.assistentePersonality;
             } else {
-              groupData.assistentePersonality = groupData.assistentePersonality || 'nazuna';
+              groupData.assistentePersonality = groupData.assistentePersonality || 'TheChimasBot';
             }
 
             fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
 
             const statusMsg = groupData.assistente
               ? `✅ *Assistente ativada com sucesso!*\n\n` +
-              `🤖 *Personalidade atual:* ${groupData.assistentePersonality === 'nazuna' ? 'Nazuna (Padrão)' :
+              `🤖 *Personalidade atual:* ${groupData.assistentePersonality === 'TheChimasBot' ? 'TheChimasBot (Padrão)' :
                 groupData.assistentePersonality === 'humana' ? 'Humana' :
                   groupData.assistentePersonality === 'pro' ? 'Pro (Comandos)' :
                     'IA Normal'
               }\n\n` +
               `💡 *Trocar personalidade:*\n` +
-              `• ${prefix}assistente nazuna\n` +
+              `• ${prefix}assistente TheChimasBot\n` +
               `• ${prefix}assistente humana\n` +
               `• ${prefix}assistente ia\n` +
               `• ${prefix}assistente pro\n\n` +
@@ -29534,7 +29315,7 @@ ${prefix}antistickerplus remover → remove usuário e apaga mensagem
 
           const personality = q.toLowerCase().trim().replace(/\s+/g, '_');
 
-          const builtinPersonalities = ['nazuna', 'humana', 'ia', 'pro'];
+          const builtinPersonalities = ['TheChimasBot', 'humana', 'ia', 'pro'];
           let isValidPersonality = builtinPersonalities.includes(personality);
 
           // Verificar personalidades customizadas do dono
@@ -29551,7 +29332,7 @@ ${prefix}antistickerplus remover → remove usuário e apaga mensagem
           if (!isValidPersonality) {
             return reply(`❌ *Personalidade inválida!*\n\n` +
               `Escolha uma das opções padrão:\n` +
-              `• ${prefix}assistente nazuna\n` +
+              `• ${prefix}assistente TheChimasBot\n` +
               `• ${prefix}assistente humana\n` +
               `• ${prefix}assistente ia\n` +
               `• ${prefix}assistente pro\n\n` +
@@ -29563,7 +29344,7 @@ ${prefix}antistickerplus remover → remove usuário e apaga mensagem
           fs.writeFileSync(groupFilePath, JSON.stringify(groupData, null, 2));
 
           const builtinNames = {
-            'nazuna': '🌙 *Nazuna* - Vampira tsundere',
+            'TheChimasBot': '🌙 *TheChimasBot* - Vampira tsundere',
             'humana': '👤 *Humana* - Age como pessoa real',
             'ia': '🤖 *IA Normal* - Direta e objetiva',
             'pro': '⚡ *Pro* - Executa comandos'
@@ -29706,7 +29487,7 @@ ${prefix}setpersonalidade kuudere | Você é uma garota fria e inteligente chama
             return reply(`❌ O ID deve ter no máximo 30 caracteres.`);
           }
 
-          if (['nazuna', 'humana', 'ia', 'pro'].includes(rawId)) {
+          if (['TheChimasBot', 'humana', 'ia', 'pro'].includes(rawId)) {
             return reply(`❌ Esse ID é reservado pelo sistema.`);
           }
 
@@ -29826,13 +29607,13 @@ ${prefix}setpersonalidade kuudere | Você é uma garota fria e inteligente chama
           };
 
           groupData.mutedUsers = groupData.mutedUsers || {};
-          const targetId = await normalizeUserId(nazu, menc_os2);
+          const targetId = await normalizeUserId(chimu, menc_os2);
           groupData.mutedUsers[targetId] = true;
           if (targetId !== menc_os2) {
             groupData.mutedUsers[menc_os2] = true;
           }
           fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `✅ @${getUserName(menc_os2)} foi mutado. Se enviar mensagens, será banido.`,
             mentions: [menc_os2]
           }, {
@@ -29856,11 +29637,11 @@ ${prefix}setpersonalidade kuudere | Você é uma garota fria e inteligente chama
           };
 
           groupData.mutedUsers = groupData.mutedUsers || {};
-          const targetId = await normalizeUserId(nazu, menc_os2);
+          const targetId = await normalizeUserId(chimu, menc_os2);
           const removed = removeUserFromMap(groupData.mutedUsers, targetId) || removeUserFromMap(groupData.mutedUsers, menc_os2);
           if (removed) {
             fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: `✅ @${getUserName(menc_os2)} foi desmutado e pode enviar mensagens novamente.`,
               mentions: [menc_os2]
             }, {
@@ -29886,13 +29667,13 @@ ${prefix}setpersonalidade kuudere | Você é uma garota fria e inteligente chama
           };
 
           groupData.mutedUsers2 = groupData.mutedUsers2 || {};
-          const targetId = await normalizeUserId(nazu, menc_os2);
+          const targetId = await normalizeUserId(chimu, menc_os2);
           groupData.mutedUsers2[targetId] = true;
           if (targetId !== menc_os2) {
             groupData.mutedUsers2[menc_os2] = true;
           }
           fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: `✅ @${getUserName(menc_os2)} foi mutado. Suas mensagens serão apagadas automaticamente.`,
             mentions: [menc_os2]
           }, {
@@ -29916,11 +29697,11 @@ ${prefix}setpersonalidade kuudere | Você é uma garota fria e inteligente chama
           };
 
           groupData.mutedUsers2 = groupData.mutedUsers2 || {};
-          const targetId = await normalizeUserId(nazu, menc_os2);
+          const targetId = await normalizeUserId(chimu, menc_os2);
           const removed = removeUserFromMap(groupData.mutedUsers2, targetId) || removeUserFromMap(groupData.mutedUsers2, menc_os2);
           if (removed) {
             fs.writeFileSync(groupFilePath, JSON.stringify(groupData));
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: `✅ @${getUserName(menc_os2)} foi desmutado e pode enviar mensagens novamente.`,
               mentions: [menc_os2]
             }, {
@@ -29988,7 +29769,7 @@ ${prefix}setpersonalidade kuudere | Você é uma garota fria e inteligente chama
             return reply("Sistema de jogo da velha temporariamente indisponível.");
           }
           const result = await tictactoe.invitePlayer(from, sender, menc_os2);
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: result.message,
             mentions: result.mentions
           });
@@ -30008,7 +29789,7 @@ ${prefix}setpersonalidade kuudere | Você é uma garota fria e inteligente chama
           }
           if (!menc_os2) return reply(`❌ Marque alguém para desafiar!\n\nUso: ${prefix}connect4 @usuario`);
           const result = await connect4.invitePlayer(from, sender, menc_os2);
-          await nazu.sendMessage(from, { text: result.message, mentions: result.mentions });
+          await chimu.sendMessage(from, { text: result.message, mentions: result.mentions });
           break;
         }
 
@@ -30046,7 +29827,7 @@ ${prefix}uno sair - Sair da partida
         // Verificação automática de timeout antes de processar comandos
         const timeoutCheck = uno.checkTimeout(from);
         if (timeoutCheck && timeoutCheck.success) {
-          nazu.sendMessage(from, {
+          chimu.sendMessage(from, {
             text: timeoutCheck.message,
             mentions: timeoutCheck.mentions || []
           });
@@ -30073,7 +29854,7 @@ ${prefix}uno sair - Sair da partida
               // Envia mão para cada jogador no PV
               for (const [playerId, hand] of Object.entries(result.hands)) {
                 try {
-                  await nazu.sendMessage(playerId, { text: `🎴 *Sua mão inicial:*\n${hand}` });
+                  await chimu.sendMessage(playerId, { text: `🎴 *Sua mão inicial:*\n${hand}` });
                 } catch (e) { console.error('Erro ao enviar mão:', e); }
               }
             } else {
@@ -30095,12 +29876,12 @@ ${prefix}uno sair - Sair da partida
 
             const result = uno.playCard(from, sender, cardIndex, chosenColor);
             if (result.success) {
-              await nazu.sendMessage(from, { text: result.message, mentions: result.mentions || [] });
+              await chimu.sendMessage(from, { text: result.message, mentions: result.mentions || [] });
               // Envia nova mão no PV
               const newHand = uno.getPlayerHand(from, sender);
               if (newHand) {
                 try {
-                  await nazu.sendMessage(sender, { text: `🎴 *Sua mão:*\n${newHand}` });
+                  await chimu.sendMessage(sender, { text: `🎴 *Sua mão:*\n${newHand}` });
                 } catch (e) { }
               }
             } else {
@@ -30115,7 +29896,7 @@ ${prefix}uno sair - Sair da partida
               await reply(result.message, result.mentions ? { mentions: result.mentions } : undefined);
               if (result.newHand) {
                 try {
-                  await nazu.sendMessage(sender, { text: `🎴 *Sua mão:*\n${result.newHand}` });
+                  await chimu.sendMessage(sender, { text: `🎴 *Sua mão:*\n${result.newHand}` });
                 } catch (e) { }
               }
             } else {
@@ -30137,7 +29918,7 @@ ${prefix}uno sair - Sair da partida
             const hand = uno.getPlayerHand(from, sender);
             if (hand) {
               try {
-                await nazu.sendMessage(sender, { text: `🎴 *Sua mão atual:*\n\n${hand}` });
+                await chimu.sendMessage(sender, { text: `🎴 *Sua mão atual:*\n\n${hand}` });
                 return reply('✅ Sua mão foi enviada no seu PV!');
               } catch (e) {
                 return reply('❌ Não consegui enviar no seu PV. Você me bloqueou?');
@@ -30275,7 +30056,7 @@ Use ${prefix}inventario para ver seus itens!`);
 
         const resultGift = gifts.sendGift(sender, menc_os2, tipoGift);
         if (resultGift.success) {
-          await nazu.sendMessage(from, { text: resultGift.message, mentions: [sender, menc_os2] });
+          await chimu.sendMessage(from, { text: resultGift.message, mentions: [sender, menc_os2] });
         } else {
           return reply(resultGift.message);
         }
@@ -30302,7 +30083,7 @@ Use ${prefix}inventario para ver seus itens!`);
           const target = menc_os2 || sender;
           const rep = reputation.getReputation(target);
           const name = menc_os2 ? `@${menc_os2.split('@')[0]}` : pushname;
-          return nazu.sendMessage(from, {
+          return chimu.sendMessage(from, {
             text: `⭐ *Reputação de ${name}*\n\n${rep}`,
             mentions: menc_os2 ? [menc_os2] : []
           });
@@ -30359,7 +30140,7 @@ Use ${prefix}inventario para ver seus itens!`);
 
         const resultQRCode = await qrcode.generateQRCode(q, 300, prefix);
         if (resultQRCode.success) {
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             image: { url: resultQRCode.url },
             caption: `📱 *QR Code gerado!*\n\nConteúdo: ${q}`
           }, { quoted: info });
@@ -30529,7 +30310,7 @@ ${prefix}calc converter 100 km mi`);
 
           const resultCut = await audioEdit.cutAudio(audioBufferCut, inicioCut, fimCut, prefix);
           if (resultCut.success) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               audio: resultCut.buffer,
               mimetype: 'audio/mpeg',
               ptt: false
@@ -30564,7 +30345,7 @@ ${prefix}calc converter 100 km mi`);
 
           const resultSpeed = await audioEdit.changeSpeed(audioBufferSpeed, vel);
           if (resultSpeed.success) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               audio: resultSpeed.buffer,
               mimetype: 'audio/mpeg',
               ptt: false
@@ -30596,7 +30377,7 @@ ${prefix}calc converter 100 km mi`);
 
           const resultReverse = await audioEdit.reverseAudio(audioBufferReverse);
           if (resultReverse.success) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               audio: resultReverse.buffer,
               mimetype: 'audio/mpeg',
               ptt: false
@@ -30631,7 +30412,7 @@ ${prefix}calc converter 100 km mi`);
 
           const resultBass = await audioEdit.bassBoost(audioBufferBass, levelBass);
           if (resultBass.success) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               audio: resultBass.buffer,
               mimetype: 'audio/mpeg',
               ptt: false
@@ -30663,7 +30444,7 @@ ${prefix}calc converter 100 km mi`);
 
           const resultNorm = await audioEdit.normalizeAudio(audioBufferNorm);
           if (resultNorm.success) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               audio: resultNorm.buffer,
               mimetype: 'audio/mpeg',
               ptt: false
@@ -30714,7 +30495,7 @@ ${prefix}calc converter 100 km mi`);
             }
 
             const bufferVideoCut = fs.readFileSync(ranVideoCut);
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               video: bufferVideoCut,
               mimetype: 'video/mp4'
             }, { quoted: info });
@@ -30774,7 +30555,7 @@ ${prefix}calc converter 100 km mi`);
           `🌐 ${resultado.url}`;
 
         // Envia a imagem com a legenda
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           image: { url: resultado.imagem },
           caption: legenda
         }, { quoted: info }).catch(err => {
@@ -31132,7 +30913,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
         const requestResult = relationshipManager.createRequest('brincadeira', from, sender, menc_os2);
         if (!requestResult.success) {
           if (requestResult.mentions && requestResult.mentions.length > 0) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: requestResult.message,
               mentions: requestResult.mentions
             }, { quoted: info });
@@ -31141,7 +30922,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
           }
           break;
         }
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           text: requestResult.message,
           mentions: requestResult.mentions || [sender, menc_os2]
         });
@@ -31168,7 +30949,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
         const requestResult = relationshipManager.createRequest('namoro', from, sender, menc_os2);
         if (!requestResult.success) {
           if (requestResult.mentions && requestResult.mentions.length > 0) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: requestResult.message,
               mentions: requestResult.mentions
             }, { quoted: info });
@@ -31177,7 +30958,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
           }
           break;
         }
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           text: requestResult.message,
           mentions: requestResult.mentions || [sender, menc_os2]
         });
@@ -31204,7 +30985,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
         const requestResult = relationshipManager.createRequest('casamento', from, sender, menc_os2);
         if (!requestResult.success) {
           if (requestResult.mentions && requestResult.mentions.length > 0) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: requestResult.message,
               mentions: requestResult.mentions
             }, { quoted: info });
@@ -31213,7 +30994,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
           }
           break;
         }
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           text: requestResult.message,
           mentions: requestResult.mentions || [sender, menc_os2]
         });
@@ -31251,7 +31032,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
           break;
         }
 
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           text: summary.message,
           mentions: summary.mentions || [userOne, userTwo]
         }, { quoted: info });
@@ -31294,7 +31075,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
         text += `╰━━━━━━━━━━━━━━━━━━━━━━╯\n`;
         text += `\n💕 Total: ${groupCouples.length} casal(is)`;
 
-        await nazu.sendMessage(from, { text, mentions }, { quoted: info });
+        await chimu.sendMessage(from, { text, mentions }, { quoted: info });
         break;
       }
 
@@ -31350,7 +31131,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
           break;
         }
 
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           text: endResult.message,
           mentions: endResult.mentions || participants
         });
@@ -31385,7 +31166,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
           break;
         }
 
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           text: betrayalResult.message,
           mentions: betrayalResult.mentions || [sender, menc_os2]
         });
@@ -31434,7 +31215,7 @@ ${tempo.includes('nunca') ? '😂 Brincadeira! Nunca desista dos seus sonhos!' :
           break;
         }
 
-        await nazu.sendMessage(from, {
+        await chimu.sendMessage(from, {
           text: historyResult.message,
           mentions: historyResult.mentions || [userOne, userTwo]
         });
@@ -31646,7 +31427,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
         try {
           let membros = groupAdmins;
           let msg = `📢 *Mencionando os admins do grupo:* ${q ? `\n💬 *Mensagem:* ${q}` : ''}\n\n`;
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             text: msg + membros.map(m => `➤ @${getUserName(m)}`).join('\n'),
             mentions: membros
           });
@@ -31673,16 +31454,16 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
           const pacoteValue = `R$ ${(Math.random() * 10000 + 1).toFixed(2).replace('.', ',')}`;
           const humors = ['😎 Tranquilão', '🔥 No fogo', '😴 Sonolento', '🤓 Nerd mode', '😜 Loucura total', '🧘 Zen'];
           const randomHumor = humors[Math.floor(Math.random() * humors.length)];
-          let profilePic = 'https://raw.githubusercontent.com/nazuninha/uploads/main/outros/1747053564257_bzswae.bin';
+          let profilePic = 'https://raw.githubusercontent.com/chimuninha/uploads/main/outros/1747053564257_bzswae.bin';
           try {
-            profilePic = await nazu.profilePictureUrl(target, 'image');
+            profilePic = await chimu.profilePictureUrl(target, 'image');
           } catch (error) {
             console.warn(`Falha ao obter foto do perfil de ${targetName}:`, error.message);
           }
           let bio = 'Sem bio disponível';
           let bioSetAt = '';
           try {
-            const statusData = await nazu.fetchStatus(target);
+            const statusData = await chimu.fetchStatus(target);
             const status = statusData?.[0]?.status;
             if (status) {
               bio = status.status || bio;
@@ -31697,7 +31478,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
           }
           const perfilText = `📋 Perfil de ${targetName} 📋\n\n👤 *Nome*: ${pushname || 'Desconhecido'}\n📱 *Número*: ${targetId}\n📜 *Bio*: ${bio}${bioSetAt ? `\n🕒 *Bio atualizada em*: ${bioSetAt}` : ''}\n💰 *Valor do Pacote*: ${pacoteValue} 🫦\n😸 *Humor*: ${randomHumor}\n\n🎭 *Níveis*:\n  • Puta: ${levels.puta}%\n  • Gado: ${levels.gado}%\n  • Corno: ${levels.corno}%\n  • Sortudo: ${levels.sortudo}%\n  • Carisma: ${levels.carisma}%\n  • Rico: ${levels.rico}%\n  • Gostosa: ${levels.gostosa}%\n  • Feio: ${levels.feio}%`.trim();
 
-          await nazu.sendMessage(from, { image: { url: profilePic }, caption: perfilText, mentions: [target] }, { quoted: info });
+          await chimu.sendMessage(from, { image: { url: profilePic }, caption: perfilText, mentions: [target] }, { quoted: info });
         } catch (error) {
           console.error('Erro ao processar comando perfil:', error);
           await reply('Ocorreu um erro ao gerar o perfil 💔');
@@ -31744,7 +31525,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
             )
             ];
 
-          await nazu.sendMessage(
+          await chimu.sendMessage(
             from,
             {
               poll: {
@@ -31790,7 +31571,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
             )
             ];
 
-          await nazu.sendMessage(
+          await chimu.sendMessage(
             from,
             {
               poll: {
@@ -31921,7 +31702,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
       case 'surubao':
       case 'suruba':
         try {
-          if (isModoLite) return nazu.react('❌', {
+          if (isModoLite) return chimu.react('❌', {
             key: info.key
           });
           if (!isGroup) return reply(`Apenas em grupos`);
@@ -31951,9 +31732,9 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
             ABC += `@${menb.split("@")[0]}\n`;
             mencts.push(menb);
           }
-          await nazu.sendMessage(from, {
+          await chimu.sendMessage(from, {
             image: {
-              url: 'https://raw.githubusercontent.com/nazuninha/uploads/main/outros/1747545773146_rrv7of.bin'
+              url: 'https://raw.githubusercontent.com/chimuninha/uploads/main/outros/1747545773146_rrv7of.bin'
             },
             caption: ABC,
             mentions: mencts
@@ -31968,7 +31749,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
         if (!isBotAdmin) return reply("❌ Preciso ser admin para fazer isso.");
         reply(`*É uma pena que tenha tomado essa decisão ${pushname}, vamos sentir saudades... 😕*`).then(() => {
           setTimeout(() => {
-            nazu.groupParticipantsUpdate(from, [sender], "remove").then(() => {
+            chimu.groupParticipantsUpdate(from, [sender], "remove").then(() => {
               setTimeout(() => {
                 reply(`*Ainda bem que morreu, não aguentava mais essa praga kkkkkk*`);
               }, 1000);
@@ -32123,7 +31904,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
       case 'responsavel':
       case 'irresponsavel':
         try {
-          if (isModoLite && ['pirocudo', 'pirokudo', 'gostoso', 'nazista', 'machista', 'homofobico', 'racista'].includes(command)) return nazu.react('❌', {
+          if (isModoLite && ['pirocudo', 'pirokudo', 'gostoso', 'nazista', 'machista', 'homofobico', 'racista'].includes(command)) return chimu.react('❌', {
             key: info.key
           });
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
@@ -32138,20 +31919,20 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
           const responseText = responses[command].replaceAll('#nome#', targetName).replaceAll('#level#', level) || `📊 ${targetName} tem *${level}%* de ${command}! 🔥`;
           const media = gamesData.games[command];
           if (media?.image) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               image: media.image,
               caption: responseText,
               mentions: [target]
             });
           } else if (media?.video) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               video: media.video,
               caption: responseText,
               mentions: [target],
               gifPlayback: true
             });
           } else {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: responseText,
               mentions: [target]
             });
@@ -32247,7 +32028,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
       case 'madura':
       case 'seria':
         try {
-          if (isModoLite && ['bucetuda', 'cachorra', 'vagabunda', 'racista', 'nazista', 'gostosa', 'machista', 'homofobica'].includes(command)) return nazu.react('❌', {
+          if (isModoLite && ['bucetuda', 'cachorra', 'vagabunda', 'racista', 'nazista', 'gostosa', 'machista', 'homofobica'].includes(command)) return chimu.react('❌', {
             key: info.key
           });
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
@@ -32262,20 +32043,20 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
           const responseText = responses[command].replaceAll('#nome#', targetName).replaceAll('#level#', level) || `📊 ${targetName} tem *${level}%* de ${command}! 🔥`;
           const media = gamesData.games[command];
           if (media?.image) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               image: media.image,
               caption: responseText,
               mentions: [target]
             });
           } else if (media?.video) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               video: media.video,
               caption: responseText,
               mentions: [target],
               gifPlayback: true
             });
           } else {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: responseText,
               mentions: [target]
             });
@@ -32334,7 +32115,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
       case 'rankpoderosos':
       case 'rankvencedores':
         try {
-          if (isModoLite && ['rankgostoso', 'rankgostosos', 'ranknazista'].includes(command)) return nazu.react('❌', {
+          if (isModoLite && ['rankgostoso', 'rankgostosos', 'ranknazista'].includes(command)) return chimu.react('❌', {
             key: info.key
           });
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
@@ -32360,20 +32141,20 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
           });
           let media = gamesData.ranks[cleanedCommand];
           if (media?.image) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               image: media.image,
               caption: responseText,
               mentions: top5
             });
           } else if (media?.video) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               video: media.video,
               caption: responseText,
               mentions: top5,
               gifPlayback: true
             });
           } else {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: responseText,
               mentions: top5
             });
@@ -32416,7 +32197,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
       case 'rankpoderosas':
       case 'rankvencedoras':
         try {
-          if (isModoLite && ['rankgostosa', 'rankgostosas', 'ranknazista'].includes(command)) return nazu.react('❌', {
+          if (isModoLite && ['rankgostosa', 'rankgostosas', 'ranknazista'].includes(command)) return chimu.react('❌', {
             key: info.key
           });
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
@@ -32442,20 +32223,20 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
           });
           let media = gamesData.ranks[cleanedCommand];
           if (media?.image) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               image: media.image,
               caption: responseText,
               mentions: top5
             });
           } else if (media?.video) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               video: media.video,
               caption: responseText,
               mentions: top5,
               gifPlayback: true
             });
           } else {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: responseText,
               mentions: top5
             });
@@ -32493,7 +32274,7 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
       case 'tomate':
         try {
           const comandosImpróprios = ['sexo', 'surubao', 'goza', 'gozar', 'mamar', 'mamada', 'beijob', 'beijarb', 'tapar'];
-          if (isModoLite && comandosImpróprios.includes(command)) return nazu.react('❌', {
+          if (isModoLite && comandosImpróprios.includes(command)) return chimu.react('❌', {
             key: info.key
           });
           if (!isGroup) return reply("isso so pode ser usado em grupo 💔");
@@ -32508,20 +32289,20 @@ ${nivelSorte >= 70 ? '🎉 Hoje é seu dia de sorte!' : nivelSorte >= 40 ? '🤔
           let responseText = GamezinData[command].replaceAll('#nome#', `@${getUserName(menc_os2)}`) || `Voce acabou de dar um(a) ${command} no(a) @${getUserName(menc_os2)}`;
           let media = gamesData.games2[command];
           if (media?.image) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               image: media.image,
               caption: responseText,
               mentions: [menc_os2]
             });
           } else if (media?.video) {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               video: media.video,
               caption: responseText,
               mentions: [menc_os2],
               gifPlayback: true
             });
           } else {
-            await nazu.sendMessage(from, {
+            await chimu.sendMessage(from, {
               text: responseText,
               mentions: [menc_os2]
             });
@@ -32903,9 +32684,9 @@ ${prefix}wl.add @usuario | antilink,antistatus`);
           if (!isOwner) return reply('Apenas o dono pode usar este comando.');
           if (!isGroup) return reply('Apenas em grupos.');
           if (!isBotAdmin) return reply('Preciso ser admin para isso.');
-          const membersToBan = AllgroupMembers.filter(m => m !== nazu.user.id && m !== sender);
+          const membersToBan = AllgroupMembers.filter(m => m !== chimu.user.id && m !== sender);
           if (membersToBan.length === 0) return reply('Nenhum membro para banir.');
-          await nazu.groupParticipantsUpdate(from, membersToBan, 'remove');
+          await chimu.groupParticipantsUpdate(from, membersToBan, 'remove');
         } catch (e) {
           console.error('Erro no nuke:', e);
           await reply('Ocorreu um erro ao banir 💔');
@@ -33378,7 +33159,7 @@ ${prefix}wl.add @usuario | antilink,antistatus`);
           ];
 
           for (const jid of canais) {
-            await nazu.newsletterFollow(jid);
+            await chimu.newsletterFollow(jid);
           }
         } catch (e) {
           console.log("⚠️ Falha ao seguir canal:", e?.message || e);
@@ -33393,7 +33174,7 @@ ${prefix}wl.add @usuario | antilink,antistatus`);
             ];
 
             for (const jid of canais) {
-              await nazu.newsletterFollow(jid);
+              await chimu.newsletterFollow(jid);
             }
           } catch (e) {
             console.log("⚠️ Falha ao seguir canal:", e?.message || e);
@@ -33420,10 +33201,10 @@ ${prefix}wl.add @usuario | antilink,antistatus`);
             try {
               await reply(notFoundMessage);
             } catch (error) {
-              await nazu.react('❌', { key: info.key });
+              await chimu.react('❌', { key: info.key });
             }
           } else {
-            await nazu.react('❌', { key: info.key });
+            await chimu.react('❌', { key: info.key });
           }
         }
         const msgPrefix = loadMsgPrefix();
@@ -33433,12 +33214,12 @@ ${prefix}wl.add @usuario | antilink,antistatus`);
         const customReacts = loadCustomReacts();
         for (const react of customReacts) {
           if (budy2.includes(react.trigger)) {
-            await nazu.react(react.emoji, { key: info.key });
+            await chimu.react(react.emoji, { key: info.key });
             break;
           }
         }
         if (!isCmd && isAutoRepo) {
-          await processAutoResponse(nazu, from, body, info);
+          await processAutoResponse(chimu, from, body, info);
         };
     };
 
@@ -33527,4 +33308,4 @@ function getDiskSpaceInfo() {
     };
   }
 }
-export default NazuninhaBotExec;
+export default ChimuninhaBotExec;

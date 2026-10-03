@@ -1,21 +1,22 @@
 {
-  "nomedono": "DevTokyo",
-  "numerodono": "553285076326",
-  "nomebot": "Nazuna",
-  "prefixo": "#",
-  "site_vex": "https://vexapi.com.br",
-  "apikey_vex": "SUAKEY",
-  "lidowner": "278696501993618@lid",
-  "github_ofc": "https://github.com/DevTokyoVx/nazuna",
-  "autor": "DevTokyoVx",
-  "repositorio": "nazuna",
+  "nomedono": "ChimasAlice",
+  "numerodono": "SeuNumero",
+  "nomebot": "TheChimasBot",
+  "prefixo": "/",
+  "site_vex": "",
+  "apikey_vex": "",
+  "lidowner": "SeuLid",
+  "github_ofc": "https://github.com/MalvxOfficial/TheChimasBot",
+  "autor": "MalvxOfficial",
+  "repositorio": "TheChimasBot",
   "WA_WEB_VERSION": {
     "aviso": "Não mexa aqui, pode afetar o funcionamento do BOT.",
     "value": [
-      2,
-      3000,
-      1034740716
+      9,
+      9999,
+      999999999
     ]
   },
-  "globalMode": true
+  "globalMode": true,
+  "modoDono": true
 }

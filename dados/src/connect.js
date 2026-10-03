@@ -5,7 +5,6 @@ import readline from 'readline';
 import pino from 'pino';
 import fs from 'fs/promises';
 import path, { dirname, join } from 'path';
-import qrcode from 'qrcode-terminal';
 import { readFile } from 'fs/promises';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -18,6 +17,7 @@ import { loadMsgBotOn } from './utils/database.js';
 import { buildUserId } from './utils/helpers.js';
 import { initCaptchaIndex, loadCaptchaJson, saveCaptchaJson } from './utils/captchaIndex.js';
 import CaptchaIndex from './utils/captchaIndex.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const modules = await import('./funcs/exports.js');
@@ -44,7 +44,7 @@ class MessageQueue {
             batchesProcessed: 0,
             avgBatchTime: 0
         };
-        this.idCounter = 0; 
+        this.idCounter = 0;
     }
 
     setErrorHandler(handler) {
@@ -74,7 +74,6 @@ class MessageQueue {
         if (this.isProcessing) return;
 
         this.isProcessing = true;
-
         this.processQueue();
     }
 
@@ -90,15 +89,13 @@ class MessageQueue {
     }
 
     async processQueue() {
-                while (this.isProcessing && this.queue.length > 0) {
-
+        while (this.isProcessing && this.queue.length > 0) {
             const availableBatches = Math.min(
                 this.batchSize,
                 Math.ceil(this.queue.length / this.messagesPerBatch)
             );
 
             if (availableBatches === 0) break;
-
 
             const batches = [];
             for (let i = 0; i < availableBatches && this.queue.length > 0; i++) {
@@ -113,7 +110,6 @@ class MessageQueue {
             }
 
             this.stats.currentQueueLength = this.queue.length;
-
 
             const batchStartTime = Date.now();
             await Promise.allSettled(
@@ -133,13 +129,11 @@ class MessageQueue {
     }
 
     async processBatch(batchItems) {
-
         const batchPromises = batchItems.map(item => this.processItem(item));
 
         const results = await Promise.allSettled(batchPromises);
 
-
-        results.forEach((result, index) => {
+        results.forEach((result) => {
             if (result.status === 'fulfilled') {
                 this.stats.totalProcessed++;
             } else {
@@ -156,8 +150,7 @@ class MessageQueue {
             resolve(result);
             return result;
         } catch (error) {
-                         await this.handleProcessingError(item, error);
-
+            await this.handleProcessingError(item, error);
         }
     }
 
@@ -173,7 +166,6 @@ class MessageQueue {
                 console.error('❌ Error handler failed:', handlerError.message);
             }
         }
-
 
         item.reject(error);
     }
@@ -216,7 +208,6 @@ class MessageQueue {
     }
 
     clear() {
-
         this.queue.forEach(item => {
             if (item.reject) {
                 item.reject(new Error('Queue cleared'));
@@ -230,7 +221,6 @@ class MessageQueue {
     async shutdown() {
         console.log('🛑 Finalizando MessageQueue...');
         this.stopProcessing();
-
 
         const shutdownTimeout = 10000;
         const startTime = Date.now();
@@ -248,26 +238,21 @@ class MessageQueue {
     }
 }
 
-const messageQueue = new MessageQueue(8, 10, 2); 
+const messageQueue = new MessageQueue(8, 10, 2);
 
 const configPath = path.join(__dirname, "config.json");
 let config;
-let DEBUG_MODE = false; 
-
-
+let DEBUG_MODE = false;
 
 global.CAPTCHA_LOCK = global.CAPTCHA_LOCK || new Set();
-
 
 try {
     const configContent = readFileSync(configPath, "utf8");
     config = JSON.parse(configContent);
 
-
     if (!config.prefixo || !config.nomebot || !config.numerodono) {
         throw new Error('Configuração inválida: campos obrigatórios ausentes (prefixo, nomebot, numerodono)');
     }
-
 
     DEBUG_MODE = config.debug === true || process.env.NAZUNA_DEBUG === '1';
     if (DEBUG_MODE) {
@@ -309,22 +294,20 @@ const AUTH_DIR = path.join(__dirname, '..', 'database', 'qr-code');
 const DATABASE_DIR = path.join(__dirname, '..', 'database');
 const GLOBAL_BLACKLIST_PATH = path.join(__dirname, '..', 'database', 'dono', 'globalBlacklist.json');
 
- let _globalBlacklistCache = null;
+let _globalBlacklistCache = null;
 let _globalBlacklistCacheTime = 0;
 const GLOBAL_BLACKLIST_TTL_MS = 60_000;
 
 let msgRetryCounterCache;
 let messagesCache;
 
-async function initializeOptimizedCaches(NazunaSock) {
+async function initializeOptimizedCaches(TheChimasBotSock) {
     try {
         await performanceOptimizer.initialize();
 
-
         const requestCaptchaMsg = async (dataCaptcha) => {
-
-            await NazunaSock.sendMessage(dataCaptcha.groupId, { text: `⚠️ @${dataCaptcha.idOrigin.split('@')[0]} não resolveu o captcha a tempo e foi removido.` });
-            await NazunaSock.groupParticipantsUpdate(dataCaptcha.groupId, [dataCaptcha.idOrigin], 'remove').catch(() => { });
+            await TheChimasBotSock.sendMessage(dataCaptcha.groupId, { text: `⚠️ @${dataCaptcha.idOrigin.split('@')[0]} não resolveu o captcha a tempo e foi removido.` });
+            await TheChimasBotSock.groupParticipantsUpdate(dataCaptcha.groupId, [dataCaptcha.idOrigin], 'remove').catch(() => { });
         };
         await initCaptchaIndex(requestCaptchaMsg);
 
@@ -344,11 +327,11 @@ async function initializeOptimizedCaches(NazunaSock) {
             useClones: false
         });
         messagesCache = new Map();
-
     }
 }
-const codeMode = process.argv.includes('--code') || process.env.NAZUNA_CODE_MODE === '1';
 
+// Força uso exclusivo por código de pareamento
+const codeMode = true;
 
 let cacheCleanupInterval = null;
 const setupMessagesCacheCleanup = () => {
@@ -357,14 +340,13 @@ const setupMessagesCacheCleanup = () => {
     cacheCleanupInterval = setInterval(() => {
         if (!messagesCache || messagesCache.size <= 3000) return;
 
-        const keysToDelete = Math.floor(messagesCache.size * 0.4); 
+        const keysToDelete = Math.floor(messagesCache.size * 0.4);
         const keys = Array.from(messagesCache.keys()).slice(0, keysToDelete);
         keys.forEach(key => messagesCache.delete(key));
 
         console.log(`🧹 Cache limpo: ${keysToDelete} mensagens removidas (total: ${messagesCache.size})`);
-    }, 300000); // A cada 5 minutos
+    }, 300000);
 };
-
 
 const startCacheCleanup = () => {
     setupMessagesCacheCleanup();
@@ -382,10 +364,8 @@ const ask = (question) => {
 };
 
 async function clearAuthDir(dirToRemove = AUTH_DIR) {
-
     try {
         const normalized = path.resolve(dirToRemove);
-
 
         const rootPath = path.parse(normalized).root;
         if (normalized === rootPath) {
@@ -403,7 +383,6 @@ async function clearAuthDir(dirToRemove = AUTH_DIR) {
         if (typeof fs.rm === 'function') {
             await fs.rm(normalized, { recursive: true, force: true });
         } else if (typeof fs.rmdir === 'function') {
-
             await fs.rmdir(normalized, { recursive: true }).catch(() => { });
         } else {
             throw new Error('API de remoção de diretório não disponível (fs.rm/fs.rmdir)');
@@ -427,7 +406,6 @@ async function loadGroupSettings(groupId) {
 }
 
 async function loadGlobalBlacklist() {
-
     const now = Date.now();
     if (_globalBlacklistCache !== null && (now - _globalBlacklistCacheTime) < GLOBAL_BLACKLIST_TTL_MS) {
         return _globalBlacklistCache;
@@ -439,7 +417,6 @@ async function loadGlobalBlacklist() {
         return _globalBlacklistCache;
     } catch (e) {
         console.error(`❌ Erro ao ler blacklist global: ${e.message}`);
-
         return _globalBlacklistCache ?? {};
     }
 }
@@ -452,8 +429,7 @@ function formatMessageText(template, replacements) {
     return text;
 }
 
-
-async function createGroupMessage(NazunaSock, groupMetadata, participants, settings, isWelcome = true) {
+async function createGroupMessage(TheChimasBotSock, groupMetadata, participants, settings, isWelcome = true) {
   const globalJson = JSON.parse(
     await fs.readFile(DATABASE_DIR + '/global.json', 'utf-8')
   );
@@ -471,7 +447,6 @@ async function createGroupMessage(NazunaSock, groupMetadata, participants, setti
     ? (globalJson.textbv || "╭━━━⊱ 🌟 *BEM-VINDO(A/S)!* 🌟 ⊱━━━╮\n│\n│ 👤 #numerodele#\n│\n│ 🏠 Grupo: *#nomedogp#*\n│ 👥 Membros: *#membros#*\n│\n╰━━━━━━━━━━━━━━━━━━━━━━━━╯\n\n✨ *Seja bem-vindo(a/s) ao grupo!* ✨")
     : (globalJson.exit?.text || "╭━━━⊱ 👋 *ATÉ LOGO!* 👋 ⊱━━━╮\n│\n│ 👤 #numerodele#\n│\n│ 🚪 Saiu do grupo\n│ *#nomedogp#*\n│\n╰━━━━━━━━━━━━━━━━━━━━━━╯\n\n💫 *Até a próxima!* 💫");
 
-
   const chosenText = settings.textbv || defaultText;
   const text = formatMessageText(chosenText, replacements);
 
@@ -480,14 +455,11 @@ async function createGroupMessage(NazunaSock, groupMetadata, participants, setti
     mentions
   };
 
-  if (settings.photo === false) {
-
-  } else if (settings.photoType === 'api') {
-
-    let profilePicUrl = 'https://raw.githubusercontent.com/nazuninha/uploads/main/outros/1747053564257_bzswae.bin';
+  if (settings.photoType === 'api' && isWelcome) {
+    let profilePicUrl = 'https://raw.githubusercontent.com/chimuninha/uploads/main/outros/1747053564257_bzswae.bin';
 
     if (participants.length === 1) {
-      profilePicUrl = await NazunaSock.profilePictureUrl(participants[0], 'image')
+      profilePicUrl = await TheChimasBotSock.profilePictureUrl(participants[0], 'image')
         .catch(() => profilePicUrl);
     }
 
@@ -495,12 +467,10 @@ async function createGroupMessage(NazunaSock, groupMetadata, participants, setti
       ? participants[0].split('@')[0]
       : `${participants.length} membros`;
 
-    const cardTitle = isWelcome ? 'Bem vindo (a)!' : 'Até logo!';
-
     const result = await canvas.gerarwelcomecard(
       profilePicUrl,
       nome,
-      cardTitle,
+      'Bem vindo (a)!',
       globalJson.welcomecard?.fundo || null,
       globalJson.welcomecard?.corMoldura || null,
       globalJson.welcomecard?.corLinhas || null,
@@ -525,11 +495,7 @@ async function createGroupMessage(NazunaSock, groupMetadata, participants, setti
   return message;
 }
 
-
-
-
-
-async function handleGroupParticipantsUpdate(NazunaSock, inf) {
+async function handleGroupParticipantsUpdate(TheChimasBotSock, inf) {
     try {
         const from = inf.id || inf.jid || (inf.participants?.length
             ? inf.participants[0].split('@')[0] + '@s.whatsapp.net'
@@ -544,23 +510,20 @@ async function handleGroupParticipantsUpdate(NazunaSock, inf) {
         if (!from) return;
         if (!inf.participants?.length) return;
 
-        const botId = NazunaSock.user.id.split(':')[0];
+        const botId = TheChimasBotSock.user.id.split(':')[0];
 
         inf.participants = inf.participants.map(isValidParticipant).filter(Boolean);
         if (inf.participants.some(p => p.startsWith(botId))) return;
 
-        const groupMetadata = await NazunaSock.groupMetadata(from).catch(() => null);
+        const groupMetadata = await TheChimasBotSock.groupMetadata(from).catch(() => null);
         if (!groupMetadata) return;
 
         const groupSettings = await loadGroupSettings(from);
-        
         
         const globalBlacklist = await loadGlobalBlacklist();
         const captchaData = await loadCaptchaJson();
 
         switch (inf.action) {
-
-
             case 'add': {
                 global.CAPTCHA_LOCK = global.CAPTCHA_LOCK || new Set();
 
@@ -569,29 +532,21 @@ async function handleGroupParticipantsUpdate(NazunaSock, inf) {
                 const membersToRemove = [];
                 const removalReasons = [];
 
-const entradaPorLink = !inf.author || inf.participants.includes(inf.author);
+                const entradaPorLink = !inf.author || inf.participants.includes(inf.author);
 
-
-if (groupSettings?.x9 && inf.author && !entradaPorLink) {
-
-    const autor = inf.author.split('@')[0];
-
-    for (const membro of inf.participants) {
-
-        const membroNum = membro.split('@')[0];
-
-        await NazunaSock.sendMessage(from, {
-            text: `✅ @${autor} aprovou a entrada de
-👤 @${membroNum}`,
-            mentions: [inf.author, membro]
-        }).catch(() => {});
-    }
-}
+                if (groupSettings?.x9 && inf.author && !entradaPorLink) {
+                    const autor = inf.author.split('@')[0];
+                    for (const membro of inf.participants) {
+                        const membroNum = membro.split('@')[0];
+                        await TheChimasBotSock.sendMessage(from, {
+                            text: `✅ @${autor} aprovou a entrada de\n👤 @${membroNum}`,
+                            mentions: [inf.author, membro]
+                        }).catch(() => {});
+                    }
+                }
 
                 for (const participant of inf.participants) {
-
                     const userId = participant.split('@')[0];
-
 
                     if (globalBlacklist?.[participant]) {
                         membersToRemove.push(participant);
@@ -599,32 +554,25 @@ if (groupSettings?.x9 && inf.author && !entradaPorLink) {
                         continue;
                     }
 
-
                     if (groupSettings.blacklist?.[participant]) {
                         membersToRemove.push(participant);
                         removalReasons.push(`@${userId} (blacklist grupo)`);
                         continue;
                     }
 
-
                     const participantStripped = participant.replace(/@.*/, '');
                     let participantNumber = participantStripped;
-
                     let isLid = false;
 
                     if (participant.endsWith('@lid')) {
                         isLid = true;
                         try {
-                            const resolved = await NazunaSock.onWhatsApp(participant);
+                            const resolved = await TheChimasBotSock.onWhatsApp(participant);
                             if (resolved?.[0]?.jid) {
                                 participantNumber = resolved[0].jid.replace(/@.*/, '');
-
                             }
                         } catch { }
                     }
-
-
-
 
                     const hasCaptchaJson = Object.values(captchaData).find(c => {
                         const lid = c.lid?.replace(/@.*/, '');
@@ -640,31 +588,15 @@ if (groupSettings?.x9 && inf.author && !entradaPorLink) {
                         );
                     });
 
-
                     const hasCaptchaLock = [...global.CAPTCHA_LOCK].some(x => {
                         const xStripped = x.replace(/@.*/, '');
                         return xStripped === participantNumber;
                     });
 
                     if (groupSettings.captchaEnabled) {
-
-                        if (hasCaptchaJson || hasCaptchaLock) {
-
-                            continue;
-                        }
-
-
-                        if (!entradaPorLink) {
-
-                            continue;
-                        }
-
-                        if (isLid && participantNumber === participantStripped) {
-
-                            continue;
-                        }
-
-
+                        if (hasCaptchaJson || hasCaptchaLock) continue;
+                        if (!entradaPorLink) continue;
+                        if (isLid && participantNumber === participantStripped) continue;
 
                         global.CAPTCHA_LOCK.add(`${participantNumber}@s.whatsapp.net`);
 
@@ -682,14 +614,13 @@ if (groupSettings?.x9 && inf.author && !entradaPorLink) {
 
                         CaptchaIndex.add(typeIds, from, answer, expiresAt, participantNumber);
 
-                        await NazunaSock.sendMessage(from, {
+                        await TheChimasBotSock.sendMessage(from, {
                             text: `🔐 *VERIFICAÇÃO*\n\nOlá @${participantNumber}\n\n❓ ${num1} + ${num2} = ?\n\n⏱️ 5 minutos.`,
                             mentions: [`${participantNumber}@s.whatsapp.net`]
                         });
 
                         continue; 
                     }
-
 
                     if (groupSettings.bemvindo) {
                         console.log(`✅ Enviando welcome para ${participantNumber}`);
@@ -702,26 +633,23 @@ if (groupSettings?.x9 && inf.author && !entradaPorLink) {
                     }
                 }
 
-
                 if (membersToRemove.length) {
-                    await NazunaSock.groupParticipantsUpdate(from, membersToRemove, 'remove');
-
-                    await NazunaSock.sendMessage(from, {
+                    await TheChimasBotSock.groupParticipantsUpdate(from, membersToRemove, 'remove');
+                    await TheChimasBotSock.sendMessage(from, {
                         text: `🚫 Removidos:\n- ${removalReasons.join('\n- ')}`,
                         mentions: membersToRemove
                     });
                 }
 
-
                 if (membersToWelcome.length) {
                     const message = await createGroupMessage(
-                        NazunaSock,
+                        TheChimasBotSock,
                         groupMetadata,
                         membersToWelcome,
                         { ...(groupSettings.welcome || {}), textbv: groupSettings.textbv }
                     );
 
-                    await NazunaSock.sendMessage(from, message);
+                    await TheChimasBotSock.sendMessage(from, message);
                 }
 
                 if (membersToWelcome2.length) {
@@ -735,7 +663,7 @@ if (groupSettings?.x9 && inf.author && !entradaPorLink) {
                     const defaultText2 = "╭━━━⊱ 🌟 *BEM-VINDO(A/S)!* 🌟 ⊱━━━╮\n│\n│ 👤 #numerodele#\n│\n│ 🏠 Grupo: *#nomedogp#*\n│ 👥 Membros: *#membros#*\n│\n╰━━━━━━━━━━━━━━━━━━━━━━━━╯\n\n✨ *Seja bem-vindo(a/s) ao grupo!* ✨";
                     const chosenText2 = groupSettings.textbv2 || defaultText2;
                     const text2 = formatMessageText(chosenText2, replacements);
-                    await NazunaSock.sendMessage(from, { text: text2, mentions });
+                    await TheChimasBotSock.sendMessage(from, { text: text2, mentions });
                 }
 
                 break;
@@ -744,14 +672,14 @@ if (groupSettings?.x9 && inf.author && !entradaPorLink) {
             case 'remove': {
                 if (groupSettings.exit?.enabled) {
                     const message = await createGroupMessage(
-                        NazunaSock,
+                        TheChimasBotSock,
                         groupMetadata,
                         inf.participants,
                         groupSettings.exit,
                         false
                     );
 
-                    await NazunaSock.sendMessage(from, message)
+                    await TheChimasBotSock.sendMessage(from, message)
                         .catch(err => console.log('❌ erro saída:', err.message));
                 }
                 break;
@@ -759,13 +687,11 @@ if (groupSettings?.x9 && inf.author && !entradaPorLink) {
 
             case 'promote':
             case 'demote': {
-
                 if (!groupSettings?.x9) return;
 
                 const autor = inf.author || '';
 
                 for (const user of inf.participants) {
-
                     const userNum = user.split('@')[0];
                     const autorNum = autor ? autor.split('@')[0] : 'desconhecido';
 
@@ -774,7 +700,7 @@ if (groupSettings?.x9 && inf.author && !entradaPorLink) {
                             ? `⬆️ @${userNum} virou ADM por @${autorNum}`
                             : `⬇️ @${userNum} deixou de ser ADM por @${autorNum}`;
 
-                    await NazunaSock.sendMessage(from, {
+                    await TheChimasBotSock.sendMessage(from, {
                         text: texto,
                         mentions: autor ? [user, autor] : [user]
                     }).catch(() => { });
@@ -789,24 +715,13 @@ if (groupSettings?.x9 && inf.author && !entradaPorLink) {
     }
 }
 
-
-
-
-
-
 export async function saveGroupSettings(groupId, settings) {
     try {
-
         const safeId = groupId.replace(/[^a-zA-Z0-9]/g, '_');
-
-
         const dirPath = path.join(__dirname, 'database', 'groups');
         const filePath = path.join(dirPath, `${safeId}.json`);
 
-
         await fs.mkdir(dirPath, { recursive: true });
-
-
         const data = JSON.stringify(settings, null, 2);
 
         await fs.writeFile(filePath, data, 'utf-8');
@@ -818,14 +733,14 @@ export async function saveGroupSettings(groupId, settings) {
         console.error(`❌ Erro ao salvar settings de ${groupId}:`, error);
     }
 }
-async function handleGroupJoinRequest(NazunaSock, inf) {
+
+async function handleGroupJoinRequest(TheChimasBotSock, inf) {
     try {
         const typeIds = { id: '', lid: '', participant: '' };
         const from = inf.id;
         let participantJid = inf.participantPn || inf.participant;
 
         if (!from || !participantJid) return;
-
 
         if (typeof participantJid === "object") {
             Object.assign(typeIds, {
@@ -840,56 +755,46 @@ async function handleGroupJoinRequest(NazunaSock, inf) {
 
         typeIds.participant = participantJid;
 
-
         global.CAPTCHA_LOCK.add(participantJid);
 
         if (typeIds.lid) {
             global.CAPTCHA_LOCK.add(typeIds.lid);
-
         }
         if (typeIds.id) {
             global.CAPTCHA_LOCK.add(typeIds.id);
-
         }
 
         const groupSettings = await loadGroupSettings(from);
 
-if (
-    groupSettings?.x9 &&
-    (
-        inf.action === 'reject' ||
-        inf.action === 'rejected'
-    )
-) {
+        if (
+            groupSettings?.x9 &&
+            (
+                inf.action === 'reject' ||
+                inf.action === 'rejected'
+            )
+        ) {
+            const autor = inf.author;
 
-    const autor = inf.author;
+            if (autor) {
+                const autorNum = autor.split('@')[0];
+                const membroNum = participantJid.split('@')[0];
 
-    if (autor) {
+                await TheChimasBotSock.sendMessage(from, {
+                    text: `❌ @${autorNum} recusou a entrada de\n👤 @${membroNum}`,
+                    mentions: [autor, participantJid]
+                }).catch(() => {});
+            }
 
-        const autorNum = autor.split('@')[0];
-        const membroNum = participantJid.split('@')[0];
-
-        await NazunaSock.sendMessage(from, {
-            text:
-`❌ @${autorNum} recusou a entrada de
-👤 @${membroNum}`,
-            mentions: [autor, participantJid]
-        }).catch(() => {});
-    }
-
-    return;
-}
-
+            return;
+        }
 
         if (groupSettings.autoAcceptRequests) {
             if (DEBUG_MODE) console.log(`[Auto-Accept] Aceitando ${participantJid} no grupo ${from}`);
-            await NazunaSock.groupRequestParticipantsUpdate(from, [participantJid], 'approve');
+            await TheChimasBotSock.groupRequestParticipantsUpdate(from, [participantJid], 'approve');
             if (!groupSettings.captchaEnabled) return;
         }
 
-
         if (groupSettings.captchaEnabled) {
-
             const num1 = Math.floor(Math.random() * 10) + 1;
             const num2 = Math.floor(Math.random() * 10) + 1;
             const answer = num1 + num2;
@@ -898,25 +803,14 @@ if (
 
             const numero = participantJid.split('@')[0];
 
-            const foto = await NazunaSock.profilePictureUrl(participantJid, 'image')
-                .catch(() => 'sem foto');
-
-            const waInfo = await NazunaSock.onWhatsApp(participantJid)
-                .catch(() => null);
-
             let nome = inf.participant;
             try {
-                nome = await NazunaSock.getName(participantJid);
+                nome = await TheChimasBotSock.getName(participantJid);
             } catch { }
-
-            const metadata = await NazunaSock.groupMetadata(from).catch(() => null);
-            const participanteMeta = metadata?.participants?.find(p => p.id === participantJid);
-
-
 
             CaptchaIndex.add(typeIds, from, answer, expiresAt, nome);
 
-            await NazunaSock.sendMessage(from, {
+            await TheChimasBotSock.sendMessage(from, {
                 text: `🔐 *VERIFICAÇÃO DE SEGURANÇA*\n\n👋 Olá @${numero}!\n\nPara garantir que você não é um bot, resolva:\n❓ *${num1} + ${num2} = ?*\n\n⏱️ Você tem 5 minutos ou será removido.`,
                 mentions: [participantJid]
             });
@@ -932,12 +826,10 @@ const isValidLid = (str) => /^[a-zA-Z0-9_]+@lid$/.test(str);
 const isValidUserId = (str) => isValidJid(str) || isValidLid(str);
 
 function isValidParticipant(participant) {
-
     if (typeof participant === 'string') {
         if (participant.trim().length === 0) return false;
         return participant;
     }
-
 
     if (participant && typeof participant === 'object' && participant.hasOwnProperty('id')) {
         const id = participant.id;
@@ -1167,7 +1059,7 @@ async function handleJidFiles(jidFiles, jidToLidMap, orphanJidsSet) {
     return { totalReplacements, totalRemovals, updatedFiles, renamedFiles, deletedFiles };
 }
 
-async function fetchLidWithRetry(NazunaSock, jid, maxRetries = 3) {
+async function fetchLidWithRetry(TheChimasBotSock, jid, maxRetries = 3) {
     if (!jid || !isValidJid(jid)) {
         console.warn(`⚠️ JID inválido fornecido: ${jid}`);
         return null;
@@ -1175,7 +1067,7 @@ async function fetchLidWithRetry(NazunaSock, jid, maxRetries = 3) {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const result = await NazunaSock.onWhatsApp(jid);
+            const result = await TheChimasBotSock.onWhatsApp(jid);
             if (result && result[0] && result[0].lid) {
                 return { jid, lid: result[0].lid };
             }
@@ -1192,7 +1084,7 @@ async function fetchLidWithRetry(NazunaSock, jid, maxRetries = 3) {
     return null;
 }
 
-async function fetchLidsInBatches(NazunaSock, uniqueJids, batchSize = 5) {
+async function fetchLidsInBatches(TheChimasBotSock, uniqueJids, batchSize = 5) {
     const lidResults = [];
     const jidToLidMap = new Map();
     let successfulFetches = 0;
@@ -1200,10 +1092,10 @@ async function fetchLidsInBatches(NazunaSock, uniqueJids, batchSize = 5) {
     for (let i = 0; i < uniqueJids.length; i += batchSize) {
         const batch = uniqueJids.slice(i, i + batchSize);
 
-        const batchPromises = batch.map(jid => fetchLidWithRetry(NazunaSock, jid));
+        const batchPromises = batch.map(jid => fetchLidWithRetry(TheChimasBotSock, jid));
         const batchResults = await Promise.allSettled(batchPromises);
 
-        batchResults.forEach((result, index) => {
+        batchResults.forEach((result) => {
             if (result.status === 'fulfilled' && result.value) {
                 const { jid, lid } = result.value;
                 lidResults.push({ jid, lid });
@@ -1220,10 +1112,10 @@ async function fetchLidsInBatches(NazunaSock, uniqueJids, batchSize = 5) {
     return { lidResults, jidToLidMap, successfulFetches };
 }
 
-async function updateOwnerLid(NazunaSock) {
+async function updateOwnerLid(TheChimasBotSock) {
     const ownerJid = `${numerodono}@s.whatsapp.net`;
     try {
-        const result = await fetchLidWithRetry(NazunaSock, ownerJid);
+        const result = await fetchLidWithRetry(TheChimasBotSock, ownerJid);
         if (result) {
             config.lidowner = result.lid;
             await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
@@ -1233,7 +1125,7 @@ async function updateOwnerLid(NazunaSock) {
     }
 }
 
-async function performMigration(NazunaSock) {
+async function performMigration(TheChimasBotSock) {
     let scanResult;
     try {
         scanResult = await scanForJids(DATABASE_DIR);
@@ -1248,7 +1140,7 @@ async function performMigration(NazunaSock) {
         return;
     }
 
-    const { jidToLidMap, successfulFetches } = await fetchLidsInBatches(NazunaSock, uniqueJids);
+    const { jidToLidMap } = await fetchLidsInBatches(TheChimasBotSock, uniqueJids);
     const orphanJidsSet = new Set(uniqueJids.filter(jid => !jidToLidMap.has(jid)));
 
     if (jidToLidMap.size === 0) {
@@ -1274,21 +1166,18 @@ async function performMigration(NazunaSock) {
         console.error(`Erro no processamento de substituições: ${processErr.message}`);
         return;
     }
-
 }
 
-
 let reconnectAttempts = 0;
-let isReconnecting = false; 
-let reconnectTimer = null; 
-let forbidden403Attempts = 0; 
+let isReconnecting = false;
+let reconnectTimer = null;
+let forbidden403Attempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
-const MAX_403_ATTEMPTS = 3; 
-const RECONNECT_DELAY_BASE = 5000; 
+const MAX_403_ATTEMPTS = 3;
+const RECONNECT_DELAY_BASE = 5000;
 
 let ownerMsgTimer = null;
 let subBotInitTimer = null;
-
 let _cachedWAVersion = null;
 
 async function getWAVersion() {
@@ -1308,12 +1197,11 @@ async function createBotSocket(authDir) {
             signalRepository
         } = await useMultiFileAuthState(authDir, makeCacheableSignalKeyStore);
 
-
         const version = await getWAVersion();
         console.log(`📱 Usando versão do WhatsApp: ${version.join('.')}`);
 
-        const NazunaSock = makeWASocket({
-            version: [2, 3000, 1044006379],
+        const TheChimasBotSock = makeWASocket({
+            version: version,
             emitOwnEvents: true,
             fireInitQueries: true,
             generateHighQualityLinkPreview: true,
@@ -1323,7 +1211,7 @@ async function createBotSocket(authDir) {
             retryRequestDelayMs: 5000,
             qrTimeout: 180000,
             keepAliveIntervalMs: 30_000,
-                 defaultQueryTimeoutMs: 60_000,
+            defaultQueryTimeoutMs: 60_000,
             maxMsgRetryCount: 5,
             shouldIgnoreJid: (jid) =>
                 isJidBroadcast(jid) || isJidStatusBroadcast(jid) || isJidNewsletter(jid),
@@ -1334,125 +1222,85 @@ async function createBotSocket(authDir) {
             logger
         });
 
-        if (codeMode && !NazunaSock.authState.creds.registered) {
-            console.log('📱 Insira o número de telefone (com código de país, ex: +5511912345678 ou +554112345678): ');
-            let phoneNumber = await ask('--> ');
-            phoneNumber = phoneNumber.replace(/\D/g, '');
-            if (!/^\d{10,15}$/.test(phoneNumber)) {
-                console.log('⚠️ Número inválido! Use um número válido com código de país (ex: 551199999999).');
-                process.exit(1);
+        // Solicita o número e gera o código de pareamento se não estiver registrado
+        if (!TheChimasBotSock.authState.creds.registered) {
+            let phoneNumber = '';
+            
+            // Verifica se existe o número do dono no config.json
+            const savedNumber = config?.numerodono ? config.numerodono.replace(/\D/g, '') : null;
+
+            if (savedNumber && /^\d{10,15}$/.test(savedNumber)) {
+                console.log(`\n📌 Número do dono encontrado no config.json: ${savedNumber}`);
+                const answer = await ask('👉 Deseja usar este número para gerar o código de pareamento? (s/n): ');
+                
+                if (answer.toLowerCase() === 's' || answer.toLowerCase() === 'sim') {
+                    phoneNumber = savedNumber;
+                }
             }
-            const rawCode = await NazunaSock.requestPairingCode(phoneNumber);
+
+            // Se o usuário respondeu 'não' ou não havia um número válido salvo, solicita via terminal
+            if (!phoneNumber) {
+                console.log('\n📱 Insira o número de telefone (com código de país, ex: 5511912345678): ');
+                let inputNumber = await ask('--> ');
+                phoneNumber = inputNumber.replace(/\D/g, '');
+                
+                if (!/^\d{10,15}$/.test(phoneNumber)) {
+                    console.log('⚠️ Número inválido! Use um número válido com código de país (ex: 551199999999).');
+                    process.exit(1);
+                }
+            }
+
+            // Gera e exibe o código de pareamento
+            const rawCode = await TheChimasBotSock.requestPairingCode(phoneNumber);
             const formattedCode = rawCode?.match(/.{1,4}/g)?.join('-') || rawCode;
-            console.log(`🔑 Código de pareamento: ${formattedCode}`);
-            console.log('📲 Envie este código no WhatsApp para autenticar o bot.');
+            console.log(`\n🔑 Código de pareamento: ${formattedCode}`);
+            console.log('📲 Envie este código no WhatsApp para autenticar o bot.\nClique em Dispositivos conectados, e em conectar dispositivo, e clique no canto inferior, conectar com número de telefone\nOu você pode apenas aguardar alguma notificação de pareamento,\n');
         }
 
-        NazunaSock.ev.on('creds.update', saveCreds);
+        TheChimasBotSock.ev.on('creds.update', saveCreds);
 
-        NazunaSock.ev.on('groups.update', async (updates) => {
+        TheChimasBotSock.ev.on('groups.update', async (updates) => {
             if (!Array.isArray(updates) || updates.length === 0) return;
-
-            if (DEBUG_MODE) {
-                console.log('\n🐛 ========== GROUPS UPDATE ==========');
-                console.log('📅 Timestamp:', new Date().toISOString());
-                console.log('📊 Number of updates:', updates.length);
-
-                updates.forEach((update, index) => {
-                    console.log(`\n--- Update ${index + 1} ---`);
-                    console.log('📦 Update data:', JSON.stringify(update, null, 2));
-                });
-
-                console.log('🐛 ====================================\n');
-            }
 
             const updatePromises = updates.map(async (ev) => {
                 if (!ev || !ev.id) return;
 
                 try {
                     const groupId = ev.id;
-
-
                     const groupData = await getGroupData(groupId).catch(() => null);
 
-                    if (!groupData?.x9) return; 
+                    if (!groupData?.x9) return;
 
                     let mensagem = null;
 
-
                     if (ev.imgUrl || ev.picUrl) {
                         mensagem = `📸 *X9 Report:* A foto do grupo foi alterada!`;
-                        console.log('[DEBUG] Foto alterada detectada');
-                    }
-
-
-                    else if (ev.subject) {
+                    } else if (ev.subject) {
                         mensagem = `📝 *X9 Report:* Nome do grupo alterado para:\n*${ev.subject}*`;
-                        console.log('[DEBUG] Nome alterado:', ev.subject);
-                    }
-
-
-                    else if (ev.desc) {
+                    } else if (ev.desc) {
                         mensagem = `📜 *X9 Report:* Descrição do grupo foi alterada!`;
-                        console.log('[DEBUG] Descrição alterada');
                     }
 
                     if (mensagem) {
-                        await NazunaSock.sendMessage(groupId, {
+                        await TheChimasBotSock.sendMessage(groupId, {
                             text: mensagem
                         }).catch(err => {
                             console.error(`❌ Erro ao enviar X9: ${err.message}`);
                         });
                     }
 
-
-                    if (DEBUG_MODE) {
-                        const meta = await NazunaSock.groupMetadata(groupId).catch(() => null);
-                        if (meta) {
-                            console.log('🐛 Metadata atualizado para:', groupId);
-                        }
-                    }
-
-                } catch (e) {
-                   
-                }
+                } catch (e) {}
             });
 
             await Promise.allSettled(updatePromises);
         });
 
-
-
-        NazunaSock.ev.on('group.join-request', async (inf) => {
-            if (DEBUG_MODE) {
-                console.log('\n🐛 ========== GROUP JOIN REQUEST ==========');
-                console.log('📅 Timestamp:', new Date().toISOString());
-                console.log('🆔 Group ID:', inf.id);
-                console.log('⚡ Action:', inf.action);
-                console.log('👤 Participant:', inf.participant);
-                console.log('📱 Participant Phone:', inf.participantPn);
-                console.log('👮 Author:', inf.author);
-                console.log('📝 Method:', inf.method);
-                console.log('📦 Full event data:', JSON.stringify(inf, null, 2));
-                console.log('🐛 ===========================================\n');
-            }
-            await handleGroupJoinRequest(NazunaSock, inf);
+        TheChimasBotSock.ev.on('group.join-request', async (inf) => {
+            await handleGroupJoinRequest(TheChimasBotSock, inf);
         });
 
-
-
-        NazunaSock.ev.on('group-participants.update', async (inf) => {
-            if (DEBUG_MODE) {
-                console.log('\n🐛 ========== GROUP PARTICIPANTS UPDATE ==========');
-                console.log('📅 Timestamp:', new Date().toISOString());
-                console.log('🆔 Group ID:', inf.id || inf.jid || 'unknown');
-                console.log('⚡ Action:', inf.action);
-                console.log('👥 Participants:', inf.participants);
-                console.log('� Author:', inf.author || 'N/A');
-                console.log('�📦 Full event data:', JSON.stringify(inf, null, 2));
-                console.log('🐛 ================================================\n');
-            }
-            await handleGroupParticipantsUpdate(NazunaSock, inf);
+        TheChimasBotSock.ev.on('group-participants.update', async (inf) => {
+            await handleGroupParticipantsUpdate(TheChimasBotSock, inf);
         });
 
         let messagesListenerAttached = false;
@@ -1468,26 +1316,14 @@ async function createBotSocket(authDir) {
                     console.error('❌ Emergency cleanup failed:', cleanupErr.message);
                 }
             }
-
-            console.error({
-                messageId: item.id,
-                errorType: error.constructor.name,
-                errorMessage: error.message,
-                stack: error.stack,
-                messageTimestamp: item.timestamp,
-                queueStatus: messageQueue.getStatus()
-            });
         };
 
         messageQueue.setErrorHandler(queueErrorHandler);
 
         const processMessage = async (info) => {
-
             const isJoinRequest = info?.messageStubType === 172;
 
-
             if (isJoinRequest) {
-
                 info.message = {
                     messageStubType: info.messageStubType,
                     messageStubParameters: info.messageStubParameters
@@ -1498,16 +1334,13 @@ async function createBotSocket(authDir) {
                 return;
             }
 
-
             if (messagesCache && info.key?.id && info.key?.remoteJid) {
-
                 const cacheKey = `${info.key.remoteJid}_${info.key.id}`;
                 messagesCache.set(cacheKey, info);
             }
 
-
             if (typeof indexModule === 'function') {
-                await indexModule(NazunaSock, info, null, messagesCache, rentalExpirationManager);
+                await indexModule(TheChimasBotSock, info, null, messagesCache, rentalExpirationManager);
             } else {
                 throw new Error('Módulo index.js não é uma função válida. Verifique o arquivo index.js.');
             }
@@ -1517,20 +1350,17 @@ async function createBotSocket(authDir) {
             if (messagesListenerAttached) return;
             messagesListenerAttached = true;
 
-            NazunaSock.ev.on('messages.upsert', async (m) => {
+            TheChimasBotSock.ev.on('messages.upsert', async (m) => {
                 if (!m.messages || !Array.isArray(m.messages)) return;
-
 
                 if (m.type === 'append') {
                     const isJoinRequest = m.messages.some(info => info?.messageStubType === 172);
                     if (!isJoinRequest) return;
                 }
 
-
                 if (m.type !== 'notify' && m.type !== 'append') return;
 
                 try {
-
                     const messageProcessingPromises = m.messages.map(info =>
                         messageQueue.add(info, processMessage).catch(err => {
                             console.error(`❌ Failed to queue message ${info.key?.id}: ${err.message}`);
@@ -1543,7 +1373,6 @@ async function createBotSocket(authDir) {
                     console.error(`❌ Error in message upsert handler: ${err.message}`);
 
                     if (err.message.includes('ENOSPC') || err.message.includes('ENOMEM')) {
-                        console.error('🚨 Critical system error detected, triggering emergency cleanup...');
                         try {
                             await performanceOptimizer.emergencyCleanup();
                         } catch (cleanupErr) {
@@ -1554,43 +1383,33 @@ async function createBotSocket(authDir) {
             });
         };
 
-        NazunaSock.ev.on('connection.update', async (update) => {
+        TheChimasBotSock.ev.on('connection.update', async (update) => {
             const {
                 connection,
-                lastDisconnect,
-                qr
+                lastDisconnect
             } = update;
-            if (qr && !NazunaSock.authState.creds.registered && !codeMode) {
-                console.log('🔗 QR Code gerado para autenticação:');
-                qrcode.generate(qr, {
-                    small: true
-                }, (qrcodeText) => {
-                    console.log(qrcodeText);
-                });
-                console.log('📱 Escaneie o QR code acima com o WhatsApp para autenticar o bot.');
-            }
+
             if (connection === 'open') {
-                                 try {
-                 
-                reconnectAttempts = 0;
-                forbidden403Attempts = 0;
-                console.log(`🔄 Conexão aberta. Inicializando sistema de otimização...`);
+                try {
+                    reconnectAttempts = 0;
+                    forbidden403Attempts = 0;
+                    console.log(`🔄 Conexão aberta. Inicializando sistema de otimização...`);
 
-                    await initializeOptimizedCaches(NazunaSock);
+                    await initializeOptimizedCaches(TheChimasBotSock);
+                    await updateOwnerLid(TheChimasBotSock);
 
-                    await updateOwnerLid(NazunaSock);
-
-                     setTimeout(() => {
-                        performMigration(NazunaSock).catch(err => {
+                    setTimeout(() => {
+                        performMigration(TheChimasBotSock).catch(err => {
                             console.error('❌ Erro na migração (não-bloqueante):', err.message);
                         });
                     }, 10_000);
 
-                    rentalExpirationManager.nazu = NazunaSock;
+                    rentalExpirationManager.chimu = TheChimasBotSock;
                     await rentalExpirationManager.initialize();
 
                     attachMessagesListener();
-                    startCacheCleanup(); 
+                    startCacheCleanup();
+
                     try {
                         const msgBotOnConfig = loadMsgBotOn();
 
@@ -1600,7 +1419,7 @@ async function createBotSocket(authDir) {
                                 ownerMsgTimer = null;
                                 try {
                                     const ownerJid = buildUserId(numerodono, config);
-                                    await NazunaSock.sendMessage(ownerJid, {
+                                    await TheChimasBotSock.sendMessage(ownerJid, {
                                         text: msgBotOnConfig.message
                                     });
                                     console.log('✅ Mensagem de inicialização enviada para o dono');
@@ -1608,19 +1427,15 @@ async function createBotSocket(authDir) {
                                     console.error('❌ Erro ao enviar mensagem de inicialização:', sendError.message);
                                 }
                             }, 3000);
-                        } else {
-                            console.log('ℹ️ Mensagem de inicialização desativada');
                         }
                     } catch (msgError) {
                         console.error('❌ Erro ao processar mensagem de inicialização:', msgError.message);
                     }
 
-
                     try {
                         const subBotManagerModule = await import('./utils/subBotManager.js');
                         const subBotManager = subBotManagerModule.default ?? subBotManagerModule;
                         console.log('🤖 Verificando sub-bots cadastrados...');
-
                         if (subBotInitTimer) clearTimeout(subBotInitTimer);
                         subBotInitTimer = setTimeout(async () => {
                             subBotInitTimer = null;
@@ -1631,13 +1446,12 @@ async function createBotSocket(authDir) {
                     }
 
                     console.log(`✅ Bot ${nomebot} iniciado com sucesso! Prefixo: ${prefixo} | Dono: ${nomedono}`);
-                    console.log(`📊 Configuração: ${messageQueue.batchSize} lotes de ${messageQueue.messagesPerBatch} mensagens (${messageQueue.batchSize * messageQueue.messagesPerBatch} msgs paralelas)`);
                 } catch (initErr) {
-
                     console.error('❌ Erro crítico na inicialização pós-conexão:', initErr.message);
-                    setTimeout(() => startNazu(), 5000);
+                    setTimeout(() => startChimu(), 5000);
                 }
             }
+
             if (connection === 'close') {
                 const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
                 const reasonMessage = {
@@ -1646,48 +1460,38 @@ async function createBotSocket(authDir) {
                     403: 'Acesso proibido (Forbidden)',
                     [DisconnectReason.connectionClosed]: 'Conexão fechada',
                     [DisconnectReason.connectionLost]: 'Conexão perdida',
-                    [DisconnectReason.connectionReplaced]: 'Conexão substituída',
+                    [DisconnectReason.connectionReplaced]: 'Conexão substituída(o bot pode ter sido iniciado em outro terminal, ou não sei...',
                     [DisconnectReason.timedOut]: 'Tempo de conexão esgotado',
                     [DisconnectReason.badSession]: 'Sessão inválida',
-                    [DisconnectReason.restartRequired]: 'Reinício necessário',
-                }[reason] || 'Motivo desconhecido';
+                    [DisconnectReason.restartRequired]: 'Reinício necessário para o bot funcionar...',
+                }[reason] || 'Motivo desconhecido, Desconecte dispositivos suspeitos pareados e remova, ou pode ter sido outra coisa.';
 
                 console.log(`❌ Conexão fechada. Código: ${reason} | Motivo: ${reasonMessage}`);
-
 
                 if (cacheCleanupInterval) {
                     clearInterval(cacheCleanupInterval);
                     cacheCleanupInterval = null;
                 }
 
-
-
                 if (ownerMsgTimer) { clearTimeout(ownerMsgTimer); ownerMsgTimer = null; }
                 if (subBotInitTimer) { clearTimeout(subBotInitTimer); subBotInitTimer = null; }
-
 
                 if (reason === 403) {
                     forbidden403Attempts++;
                     console.log(`⚠️ Erro 403 detectado. Tentativa ${forbidden403Attempts}/${MAX_403_ATTEMPTS}`);
 
                     if (forbidden403Attempts >= MAX_403_ATTEMPTS) {
-                        console.log('❌ Máximo de tentativas para erro 403 atingido. Apagando QR code e parando...');
+                        console.log('❌ Máximo de tentativas para erro 403 atingido. Apagando autenticação e parando...');
                         await clearAuthDir(authDir);
-                        console.log('🗑️ Autenticação removida. Reinicie o bot para gerar um novo QR code.');
                         process.exit(1);
                     }
 
-
-                    console.log('🔄 Tentando reconectar em 5 segundos...');
-                    if (reconnectTimer) {
-                        clearTimeout(reconnectTimer);
-                    }
+                    if (reconnectTimer) clearTimeout(reconnectTimer);
                     reconnectTimer = setTimeout(() => {
-                        startNazu();
+                        startChimu();
                     }, 5000);
                     return;
                 }
-
 
                 forbidden403Attempts = 0;
 
@@ -1696,45 +1500,39 @@ async function createBotSocket(authDir) {
                     console.log('🔄 Nova autenticação será necessária na próxima inicialização.');
                 }
 
-
                 if (reason === DisconnectReason.connectionReplaced) {
                     console.log('⚠️ Conexão substituída por outra instância. Não reconectando para evitar conflito.');
                     return;
                 }
 
-
-                let reconnectDelay = 5000;
+                let reconnectDelay = 1000;
                 if (reason === DisconnectReason.timedOut) {
-                    reconnectDelay = 3000; 
+                    reconnectDelay = 1000;
                 } else if (reason === DisconnectReason.connectionLost) {
-                    reconnectDelay = 2000; 
+                    reconnectDelay = 1000;
                 } else if (reason === DisconnectReason.loggedOut || reason === DisconnectReason.badSession) {
-                    reconnectDelay = 10000; 
+                    reconnectDelay = 1000;
                 }
 
-                console.log(`🔄 Aguardando ${reconnectDelay / 1000} segundos antes de reconectar...`);
+                console.log(`🔄 Aguardando 1 segundo antes de reconectar...`);
 
-
-                if (reconnectTimer) {
-                    clearTimeout(reconnectTimer);
-                }
+                if (reconnectTimer) clearTimeout(reconnectTimer);
 
                 reconnectTimer = setTimeout(() => {
-                    reconnectAttempts = 0; 
-                    forbidden403Attempts = 0; 
-                    startNazu();
+                    reconnectAttempts = 0;
+                    forbidden403Attempts = 0;
+                    startChimu();
                 }, reconnectDelay);
             }
         });
-        return NazunaSock;
+        return TheChimasBotSock;
     } catch (err) {
         console.error(`❌ Erro ao criar socket do bot: ${err.message}`);
         throw err;
     }
 }
 
-async function startNazu() {
-
+async function startChimu() {
     if (isReconnecting) {
         console.log('⚠️ Reconexão já em andamento, ignorando chamada duplicada...');
         return;
@@ -1743,14 +1541,11 @@ async function startNazu() {
     isReconnecting = true;
 
     try {
-        console.log('🚀 Iniciando Nazuna...');
-
+        console.log('Iniciando TheChimasBot.');
         await createBotSocket(AUTH_DIR);
-
     } catch (err) {
         reconnectAttempts++;
         console.error(`❌ Erro ao iniciar o bot (tentativa ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}): ${err.message}`);
-
 
         if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
             console.error(`❌ Máximo de tentativas de reconexão alcançado (${MAX_RECONNECT_ATTEMPTS}). Parando...`);
@@ -1758,29 +1553,22 @@ async function startNazu() {
         }
 
         if (err.message.includes('ENOSPC') || err.message.includes('ENOMEM')) {
-            console.log('🧹 Tentando limpeza de emergência...');
             try {
                 await performanceOptimizer.emergencyCleanup();
-                console.log('✅ Limpeza de emergência concluída');
             } catch (cleanupErr) {
                 console.error('❌ Falha na limpeza de emergência:', cleanupErr.message);
             }
         }
 
-
         const delay = Math.min(RECONNECT_DELAY_BASE * Math.pow(1.5, reconnectAttempts - 1), 60000);
         console.log(`🔄 Aguardando ${Math.round(delay / 1000)} segundos antes de tentar novamente...`);
 
-
-        if (reconnectTimer) {
-            clearTimeout(reconnectTimer);
-        }
+        if (reconnectTimer) clearTimeout(reconnectTimer);
 
         reconnectTimer = setTimeout(() => {
-            startNazu();
+            startChimu();
         }, delay);
     } finally {
-
         isReconnecting = false;
     }
 }
@@ -1789,23 +1577,18 @@ async function gracefulShutdown(signal) {
     const signalName = signal === 'SIGTERM' ? 'SIGTERM' : 'SIGINT';
     console.log(`📡 ${signalName} recebido, parando bot graciosamente...`);
 
-
     if (reconnectTimer) {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
     }
     isReconnecting = false;
 
-    let shutdownTimeout;
-
-
-    shutdownTimeout = setTimeout(() => {
+    let shutdownTimeout = setTimeout(() => {
         console.error('⚠️ Timeout de shutdown, forçando saída...');
         process.exit(1);
     }, 15000);
 
     try {
-
         try {
             const subBotManagerModule = await import('./utils/subBotManager.js');
             const subBotManager = subBotManagerModule.default ?? subBotManagerModule;
@@ -1815,19 +1598,13 @@ async function gracefulShutdown(signal) {
             console.error('❌ Erro ao desconectar sub-bots:', error.message);
         }
 
-
         if (cacheCleanupInterval) {
             clearInterval(cacheCleanupInterval);
             cacheCleanupInterval = null;
         }
 
-
         await messageQueue.shutdown();
-        console.log('✅ MessageQueue finalizado');
-
-
         await performanceOptimizer.shutdown();
-        console.log('✅ Performance optimizer finalizado');
 
         clearTimeout(shutdownTimeout);
         console.log('✅ Desligamento concluído');
@@ -1857,11 +1634,10 @@ process.on('uncaughtException', async (error) => {
     process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
     console.error('🚨 Promise rejeitada sem tratamento:', reason);
-
 });
 
 export { rentalExpirationManager, messageQueue };
 
-startNazu();
+startChimu();
