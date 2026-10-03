@@ -1,6 +1,5 @@
 import https from 'https';
 import fs from 'fs';
-import verificarAPI from '../API.js';
 
 const CONFIG_FILE = JSON.parse(
   fs.readFileSync(new URL('../../config.json', import.meta.url), 'utf8')
@@ -27,22 +26,6 @@ function setCache(key, val) {
   cache.set(key, { val, ts: Date.now() });
 }
 
-function requestJSON(url) {
-  return new Promise((resolve, reject) => {
-    https.get(url, res => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch {
-          resolve(null);
-        }
-      });
-    }).on('error', reject);
-  });
-}
-
 function requestBuffer(url) {
   return new Promise((resolve, reject) => {
     https.get(url, res => {
@@ -54,9 +37,6 @@ function requestBuffer(url) {
 }
 
 async function gerarLogo({ query, type }) {
-  const checkAPI = await verificarAPI();
-  if (checkAPI !== true) return { ok: false, msg: checkAPI };
-
   try {
     if (!query || !type) {
       return { ok: false, msg: '❌ Parâmetros obrigatórios não informados.' };
@@ -68,13 +48,6 @@ async function gerarLogo({ query, type }) {
 
     const { apikey_vex, site_vex } = CONFIG_FILE;
     const url = `${site_vex}/api/logos/${encodeURIComponent(type)}?apikey=${apikey_vex}&query=${encodeURIComponent(query)}`;
-
-    const json = await requestJSON(url);
-
-    const checkAfter = await verificarAPI(json);
-    if (checkAfter !== true) {
-      return { ok: false, msg: checkAfter };
-    }
 
     const buffer = await requestBuffer(url);
 
@@ -91,10 +64,8 @@ async function gerarLogo({ query, type }) {
     return { ok: false, msg: `❌ Erro ao gerar o logo: ${err.message}` };
   }
 }
-async function gerarLogo2({ query, query2, type }) {
-  const checkAPI = await verificarAPI();
-  if (checkAPI !== true) return { ok: false, msg: checkAPI };
 
+async function gerarLogo2({ query, query2, type }) {
   try {
     if (!query || !query2 || !type) {
       return { ok: false, msg: '❌ Parâmetros obrigatórios não informados.' };
@@ -106,13 +77,6 @@ async function gerarLogo2({ query, query2, type }) {
 
     const { apikey_vex, site_vex } = CONFIG_FILE;
     const url = `${site_vex}/api/duallogos/${encodeURIComponent(type)}?apikey=${apikey_vex}&query=${encodeURIComponent(query)}&text2=${encodeURIComponent(query2)}`;
-
-    const json = await requestJSON(url);
-
-    const checkAfter = await verificarAPI(json);
-    if (checkAfter !== true) {
-      return { ok: false, msg: checkAfter };
-    }
 
     const buffer = await requestBuffer(url);
 
