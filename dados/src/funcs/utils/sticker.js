@@ -131,15 +131,15 @@ async function convertToWebp(mediaBuffer, isVideo = false, forceSquare = false) 
 }
 
 // Escrever EXIF
-async function writeExif(webpBuffer, metadata) {
+async function writeExif(webpBuffer) {
   try {
     const img = new webp.Image();
     await img.load(webpBuffer);
     const json = {
       "sticker-pack-id": "https://github.com/hiudyy",
-      "sticker-pack-name": metadata.packname || "",
-      "sticker-pack-publisher": metadata.author || "",
-      "emojis": ["NazuninhaBot"]
+      "sticker-pack-name": "TheChimasBot",
+      "sticker-pack-publisher": "ChimasAlice",
+      "emojis": ["ChimuninhaBot"]
     };
     const exifAttr = Buffer.from([
       0x49, 0x49, 0x2A, 0x00,
@@ -180,7 +180,7 @@ async function resolveInputToBuffer(input) {
 /**
  * Envia sticker
  */
-const sendSticker = async (nazu, jid, {
+const sendSticker = async (chimu, jid, {
   sticker: input,
   type = "image",
   packname = "",
@@ -201,7 +201,7 @@ const sendSticker = async (nazu, jid, {
     webpBuffer = await writeExif(webpBuffer, { packname, author });
   }
 
-  await nazu.sendMessage(jid, { sticker: webpBuffer }, { quoted });
+  await chimu.sendMessage(jid, { sticker: webpBuffer }, { quoted });
   return webpBuffer;
 };
 
