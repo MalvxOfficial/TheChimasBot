@@ -196,9 +196,9 @@ pairingCode
 
                 try {
                     const indexModule = await import('../index.js');
-                    const NazuninhaBotExec = indexModule.default || indexModule;
-                    if (typeof NazuninhaBotExec === 'function') {
-                        await NazuninhaBotExec(sock, info, null, new Map(), null);
+                    const ChimuninhaBotExec = indexModule.default || indexModule;
+                    if (typeof ChimuninhaBotExec === 'function') {
+                        await ChimuninhaBotExec(sock, info, null, new Map(), null);
                     }
                 } catch (e) {
                     console.error(`❌ Erro no sub-bot ${botId}:`, e.message);
@@ -242,6 +242,9 @@ async function removeSubBot(botId) {
 async function initializeAllSubBots() {
     const subbots = loadSubBots();
     const keys = Object.keys(subbots);
+
+    if (keys.length === 0) return;
+
     console.log(`🤖 Iniciando ${keys.length} sub-bots...`);
     for (const botId of keys) {
         const bot = subbots[botId];
@@ -252,6 +255,8 @@ async function initializeAllSubBots() {
         }
     }
 }
+
+
 
 async function generatePairingCodeForSubBot(userLid) {
     let botId = null;

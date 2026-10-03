@@ -934,7 +934,7 @@ const isSubdono = userId => {
   });
 };
 
-const addSubdono = async (userId, numerodono, nazu = null) => {
+const addSubdono = async (userId, numerodono, chimu = null) => {
   if (!userId || typeof userId !== 'string' || (!isUserId(userId) && !isValidJid(userId))) {
     return {
       success: false,
@@ -942,9 +942,9 @@ const addSubdono = async (userId, numerodono, nazu = null) => {
     };
   }
   // Normalizar JID para LID se possível
-  if (nazu && isValidJid(userId)) {
+  if (chimu && isValidJid(userId)) {
     try {
-      const lid = await getLidFromJidCached(nazu, userId);
+      const lid = await getLidFromJidCached(chimu, userId);
       if (lid && lid.includes('@lid')) {
         userId = lid;
       }
@@ -1000,16 +1000,16 @@ const addSubdono = async (userId, numerodono, nazu = null) => {
   }
 };
 
-const removeSubdono = async (userId, nazu = null) => {
+const removeSubdono = async (userId, chimu = null) => {
   if (!userId || typeof userId !== 'string' || (!isUserId(userId) && !isValidJid(userId))) {
     return {
       success: false,
       message: 'ID de usuário inválido. Use o LID ou marque o usuário.'
     };
   }
-  if (nazu && isValidJid(userId)) {
+  if (chimu && isValidJid(userId)) {
     try {
-      const lid = await getLidFromJidCached(nazu, userId);
+      const lid = await getLidFromJidCached(chimu, userId);
       if (lid && lid.includes('@lid')) userId = lid;
     } catch (e) {
       console.warn('Erro ao normalizar JID para LID em removeSubdono:', e.message);
@@ -2343,7 +2343,7 @@ function getLevelingUser(levelingData, userId) {
   }
 }
 
-function checkLevelUp(userId, userData, levelingData, nazu, from) {
+function checkLevelUp(userId, userData, levelingData, chimu, from) {
   try {
     // Validação de entrada
     if (!userData || typeof userData !== 'object') return;
@@ -2374,8 +2374,8 @@ function checkLevelUp(userId, userData, levelingData, nazu, from) {
       levelUpText += `╰━━━━━━━━━━━━━━━━━━━━━━╯\n`;
       levelUpText += `\n🎊 *Parabéns pelo progresso!* 🎊`;
 
-      if (nazu && from) {
-        nazu.sendMessage(from, {
+      if (chimu && from) {
+        chimu.sendMessage(from, {
           text: levelUpText,
           mentions: [userId]
         }).catch(err => console.error('Erro ao enviar msg level up:', err.message));
@@ -2543,7 +2543,7 @@ const deleteAutoResponse = (groupId, responseId, isGlobal = false) => {
   }
 };
 
-const processAutoResponse = async (nazu, from, triggerText, info) => {
+const processAutoResponse = async (chimu, from, triggerText, info) => {
   try {
     const normalizedTrigger = normalizar(triggerText);
 
@@ -2551,7 +2551,7 @@ const processAutoResponse = async (nazu, from, triggerText, info) => {
     const globalResponses = loadCustomAutoResponses();
     for (const response of globalResponses) {
       if (normalizedTrigger.includes(response.trigger || response.received)) {
-        await sendAutoResponse(nazu, from, response, info);
+        await sendAutoResponse(chimu, from, response, info);
         return true;
       }
     }
@@ -2561,7 +2561,7 @@ const processAutoResponse = async (nazu, from, triggerText, info) => {
       const groupResponses = loadGroupAutoResponses(from);
       for (const response of groupResponses) {
         if (normalizedTrigger.includes(response.trigger)) {
-          await sendAutoResponse(nazu, from, response, info);
+          await sendAutoResponse(chimu, from, response, info);
           return true;
         }
       }
@@ -2574,13 +2574,13 @@ const processAutoResponse = async (nazu, from, triggerText, info) => {
   }
 };
 
-const sendAutoResponse = async (nazu, from, response, quotedMessage) => {
+const sendAutoResponse = async (chimu, from, response, quotedMessage) => {
   try {
     const responseData = response.response || response;
 
     // Compatibilidade com sistema antigo (apenas texto)
     if (typeof responseData === 'string') {
-      await nazu.sendMessage(from, { text: responseData }, { quoted: quotedMessage });
+      await chimu.sendMessage(from, { text: responseData }, { quoted: quotedMessage });
       return;
     }
 
@@ -2637,7 +2637,7 @@ const sendAutoResponse = async (nazu, from, response, quotedMessage) => {
         messageContent.text = responseData.content || 'Resposta automática';
     }
 
-    await nazu.sendMessage(from, messageContent, sendOptions);
+    await chimu.sendMessage(from, messageContent, sendOptions);
   } catch (error) {
     console.error('❌ Erro ao enviar auto-resposta:', error);
   }
@@ -2699,17 +2699,17 @@ const saveGlobalBlacklist = data => {
   }
 };
 
-const addGlobalBlacklist = async (userId, reason, addedBy, nazu = null) => {
+const addGlobalBlacklist = async (userId, reason, addedBy, chimu = null) => {
   if (!userId || typeof userId !== 'string' || (!isUserId(userId) && !isValidJid(userId))) {
     return {
       success: false,
       message: 'ID de usuário inválido. Use o LID ou marque o usuário.'
     };
   }
-  // Se userId é um JID e temos o nazu, tentamos normalizar para LID
-  if (nazu && isValidJid(userId)) {
+  // Se userId é um JID e temos o chimu, tentamos normalizar para LID
+  if (chimu && isValidJid(userId)) {
     try {
-      const lid = await getLidFromJidCached(nazu, userId);
+      const lid = await getLidFromJidCached(chimu, userId);
       if (lid && lid.includes('@lid')) userId = lid;
     } catch (e) {
       console.warn('Erro ao normalizar JID para LID em addGlobalBlacklist:', e.message);
@@ -2742,17 +2742,17 @@ const addGlobalBlacklist = async (userId, reason, addedBy, nazu = null) => {
   }
 };
 
-const removeGlobalBlacklist = async (userId, nazu = null) => {
+const removeGlobalBlacklist = async (userId, chimu = null) => {
   if (!userId || typeof userId !== 'string' || (!isUserId(userId) && !isValidJid(userId))) {
     return {
       success: false,
       message: 'ID de usuário inválido. Use o LID ou marque o usuário.'
     };
   }
-  // Tenta normalizar para LID se tivermos acesso ao nazu
-  if (nazu && isValidJid(userId)) {
+  // Tenta normalizar para LID se tivermos acesso ao chimu
+  if (chimu && isValidJid(userId)) {
     try {
-      const lid = await getLidFromJidCached(nazu, userId);
+      const lid = await getLidFromJidCached(chimu, userId);
       if (lid && lid.includes('@lid')) userId = lid;
     } catch (e) {
       console.warn('Erro ao normalizar JID para LID em removeGlobalBlacklist:', e.message);
