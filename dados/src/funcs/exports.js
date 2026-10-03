@@ -51,7 +51,6 @@ async function loadModules() {
             spotifyMod,
             soundcloudMod,
             facebookMod,
-            kwaiMod,
             logos,
             edits,
             canvas
@@ -66,7 +65,6 @@ async function loadModules() {
             import('./downloads/spotify.js'),
             import('./downloads/soundcloud.js'),
             import('./downloads/facebook.js'),
-            import('./downloads/kwai.js'),
             import('./logos/index.js'),
             import('./edits/index.js'),
             import('./downloads/canvas.js'),
@@ -98,15 +96,10 @@ async function loadModules() {
         }
 
         modules.igdl = igdlMod.default ?? igdlMod;
-        modules.Lyrics = lyricsMod.default ?? lyricsMod;
-        modules.spotify = spotifyMod.default ?? spotifyMod;
-        modules.soundcloud = soundcloudMod.default ?? soundcloudMod;
-        modules.facebook = facebookMod.default ?? facebookMod;
-        modules.kwai = kwaiMod.default ?? kwaiMod;
-
-        if (modules.kwai && typeof modules.kwai.dl !== 'function') {
-            console.warn('[EXPORTS] Kwai dl function not found');
-        }
+modules.Lyrics = lyricsMod.default ?? lyricsMod;
+modules.spotify = spotifyMod.default ?? spotifyMod;
+modules.soundcloud = soundcloudMod.default ?? soundcloudMod;
+modules.facebook = facebookMod.default ?? facebookMod;
 
 
         modules.logos = logos.default ?? logos;
