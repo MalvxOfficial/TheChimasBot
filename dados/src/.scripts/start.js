@@ -3,16 +3,14 @@
 import fs from 'fs/promises';
 import fsSync from 'fs';
 import path from 'path';
-import { spawn, execSync } from 'child_process';
+import { spawn } from 'child_process';
 import readline from 'readline/promises';
 import os from 'os';
 
 const CONFIG_PATH = path.join(process.cwd(), 'dados', 'src', 'config.json');
 const NODE_MODULES_PATH = path.join(process.cwd(), 'node_modules');
-const QR_CODE_DIR = path.join(process.cwd(), 'dados', 'database', 'qr-code');
 const CONNECT_FILE = path.join(process.cwd(), 'dados', 'src', 'connect.js');
 const isWindows = os.platform() === 'win32';
-const isTermux = fsSync.existsSync('/data/data/com.termux');
 
 const colors = {
   reset: '\x1b[0m',
@@ -41,70 +39,9 @@ const getVersion = () => {
 let botProcess = null;
 const version = getVersion();
 
-async function setupTermuxAutostart() {
-  if (!isTermux) {
-    info('📱 Não está rodando no Termux. Ignorando configuração de autostart.');
-    return;
-  }
-
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  const answer = await rl.question(`${colors.yellow}📱 Detectado ambiente Termux. Deseja configurar inicialização automática? (s/n): ${colors.reset}`);
-  rl.close();
-
-  if (answer.trim().toLowerCase() !== 's') {
-    info('📱 Configuração de autostart ignorada pelo usuário.');
-    return;
-  }
-
-  info('📱 Configurando inicialização automática no Termux...');
-
-  try {
-    const termuxProperties = path.join(process.env.HOME, '.termux', 'termux.properties');
-    await fs.mkdir(path.dirname(termuxProperties), { recursive: true });
-    if (!fsSync.existsSync(termuxProperties)) {
-      await fs.writeFile(termuxProperties, '');
-    }
-    execSync(`sed '/^# *allow-external-apps *= *true/s/^# *//' ${termuxProperties} -i && termux-reload-settings`, { stdio: 'inherit' });
-    mensagem('📝 Configuração de termux.properties concluída.');
-
-    const bashrcPath = path.join(process.env.HOME, '.bashrc');
-    const termuxServiceCommand = `
-am startservice --user 0 \\
-  -n com.termux/com.termux.app.RunCommandService \\
-  -a com.termux.RUN_COMMAND \\
-  --es com.termux.RUN_COMMAND_PATH '/data/data/com.termux/files/usr/bin/npm' \\
-  --esa com.termux.RUN_COMMAND_ARGUMENTS 'start' \\
-  --es com.termux.RUN_COMMAND_SESSION_NAME 'Nazuna Bot' \\
-  --es com.termux.RUN_COMMAND_WORKDIR '${path.join(process.cwd())}' \\
-  --ez com.termux.RUN_COMMAND_BACKGROUND 'false' \\
-  --es com.termux.RUN_COMMAND_SESSION_ACTION '0'
-`.trim();
-
-    let bashrcContent = '';
-    if (fsSync.existsSync(bashrcPath)) {
-      bashrcContent = await fs.readFile(bashrcPath, 'utf8');
-    }
-
-    if (!bashrcContent.includes(termuxServiceCommand)) {
-      await fs.appendFile(bashrcPath, `\n${termuxServiceCommand}\n`);
-      mensagem('📝 Comando am startservice adicionado ao ~/.bashrc');
-    } else {
-      info('📝 Comando am startservice já presente no ~/.bashrc');
-    }
-
-    mensagem('📱 Configuração de inicialização automática no Termux concluída!');
-  } catch (error) {
-    aviso(`❌ Erro ao configurar autostart no Termux: ${error.message}`);
-  }
-}
-
 function setupGracefulShutdown() {
   const shutdown = () => {
-    mensagem('🛑 Encerrando o Nazuna... Até logo!');
+    mensagem('🛑 Encerrando o TheChimasBot... Até logo!');
     if (botProcess) {
       botProcess.removeAllListeners();
       botProcess.kill();
@@ -126,7 +63,7 @@ function setupGracefulShutdown() {
 
 async function displayHeader() {
   const header = [
-    `${colors.bold}🚀 Nazuna - Conexão WhatsApp${colors.reset}`,
+    `${colors.bold}🚀 TheChimasBot - Conexão WhatsApp${colors.reset}`,
     `${colors.bold}📦 Versão: ${version}${colors.reset}`,
   ];
 
@@ -179,11 +116,10 @@ async function checkPrerequisites() {
   }
 }
 
-function startBot(codeMode = false) {
-  const args = ['--expose-gc', CONNECT_FILE];
-  if (codeMode) args.push('--code');
+function startBot() {
+  const args = ['--expose-gc', CONNECT_FILE, '--code'];
 
-  info(`📷 Iniciando com ${codeMode ? 'código de pareamento' : 'QR Code'}`);
+  info('🔑 Iniciando conexão via Código de Pareamento...');
 
   botProcess = spawn('node', args, {
     stdio: 'inherit',
@@ -192,7 +128,7 @@ function startBot(codeMode = false) {
 
   botProcess.on('error', (error) => {
     aviso(`❌ Erro ao iniciar o processo do bot: ${error.message}`);
-    restartBot(codeMode);
+    restartBot();
   });
 
   botProcess.on('close', (code) => {
@@ -201,63 +137,18 @@ function startBot(codeMode = false) {
     } else {
       aviso(`⚠️ O bot terminou com erro (código: ${code}). Reiniciando...`);
     }
-    restartBot(codeMode);
+    restartBot();
   });
 
   return botProcess;
 }
 
-function restartBot(codeMode) {
+function restartBot() {
   aviso('🔄 Reiniciando o bot em 500ms...');
   setTimeout(() => {
     if (botProcess) botProcess.removeAllListeners();
-    startBot(codeMode);
+    startBot();
   }, 500);
-}
-
-async function checkAutoConnect() {
-  try {
-    if (!fsSync.existsSync(QR_CODE_DIR)) {
-      await fs.mkdir(QR_CODE_DIR, { recursive: true });
-      return false;
-    }
-    const files = await fs.readdir(QR_CODE_DIR);
-    return files.length > 2;
-  } catch (error) {
-    aviso(`❌ Erro ao verificar diretório de QR Code: ${error.message}`);
-    return false;
-  }
-}
-
-async function promptConnectionMethod() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  console.log(`${colors.yellow}🔧 Escolha o método de conexão:${colors.reset}`);
-  console.log(`${colors.yellow}1. 📷 Conectar via QR Code${colors.reset}`);
-  console.log(`${colors.yellow}2. 🔑 Conectar via código de pareamento${colors.reset}`);
-  console.log(`${colors.yellow}3. 🚪 Sair${colors.reset}`);
-
-  const answer = await rl.question('➡️ Digite o número da opção desejada: ');
-  console.log();
-  rl.close();
-
-  switch (answer.trim()) {
-    case '1':
-      mensagem('📷 Iniciando conexão via QR Code...');
-      return { method: 'qr' };
-    case '2':
-      mensagem('🔑 Iniciando conexão via código de pareamento...');
-      return { method: 'code' };
-    case '3':
-      mensagem('👋 Encerrando... Até mais!');
-      process.exit(0);
-    default:
-      aviso('⚠️ Opção inválida! Usando conexão via QR Code como padrão.');
-      return { method: 'qr' };
-  }
 }
 
 async function main() {
@@ -265,16 +156,9 @@ async function main() {
     setupGracefulShutdown();
     await displayHeader();
     await checkPrerequisites();
-    await setupTermuxAutostart();
 
-    const hasSession = await checkAutoConnect();
-    if (hasSession) {
-      mensagem('📷 Sessão de QR Code detectada. Conectando automaticamente...');
-      startBot(false);
-    } else {
-      const { method } = await promptConnectionMethod();
-      startBot(method === 'code');
-    }
+    // Inicia diretamente por código de pareamento
+    startBot();
   } catch (error) {
     aviso(`❌ Erro inesperado: ${error.message}`);
     process.exit(1);
