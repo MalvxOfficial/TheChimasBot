@@ -19,7 +19,7 @@
   <img src="https://img.shields.io/github/forks/DevTokyoVx/chimuna?style=for-the-badge&color=blue&label=Forks" alt="Forks" />
 </p>
 
-<p align="center"><i>Projeto em Desenvolvimento(Não frequente.)</i></p>
+<p align="center"><i>Projeto em Desenvolvimento</i></p>
 
 ---
 
